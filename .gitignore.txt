@@ -1,0 +1,23 @@
+# Banco local (não sobe para o GitHub)
+fundicao.db
+*.db
+*.sqlite
+
+# Secrets e variáveis de ambiente
+.env
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Backups gerados pelo patch
+app_pg_backup.py
+
+# Sistema
+.DS_Store
+Thumbs.db
