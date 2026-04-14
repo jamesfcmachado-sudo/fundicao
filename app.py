@@ -1305,7 +1305,7 @@ def pagina_relatorios() -> None:
                             st.info("Sem permissao para alterar OFs.")
                         else:
                             with st.expander("✏️ Alterar dados desta OF", expanded=False):
-                            try:
+                             try:
                                 with db_session() as _db_ed:
                                     _of_ed = _db_ed.scalar(
                                         select(OrdemFabricacao).where(OrdemFabricacao.numero_of == _nof_sel)
