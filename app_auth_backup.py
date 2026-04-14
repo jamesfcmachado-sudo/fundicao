@@ -1200,13 +1200,20 @@ def _chave_of(codigo: str) -> tuple:
 
 def pagina_relatorios() -> None:
     st.title("Relatórios")
+    pode_alterar_of = tem_permissao("relatorios_alterar_of")
+    pode_alterar_corrida = tem_permissao("relatorios_alterar_corrida")
+    pode_configuracoes = tem_permissao("configuracoes")
     st.caption("Consultas e exportação a partir de **fundicao.db**.")
 
     with db_session() as db:
         ofs = list(db.scalars(select(OrdemFabricacao).order_by(OrdemFabricacao.criado_em.desc())).all())
         corridas = list(db.scalars(select(Corrida).order_by(Corrida.data_fusao.desc())).all())
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Ordens de fabricação", "Corridas", "Resumo", "⚙️ Configurações"])
+    if pode_configuracoes:
+        tab1, tab2, tab3, tab4 = st.tabs(["Ordens de fabricação", "Corridas", "Resumo", "⚙️ Configurações"])
+    else:
+        _tabs_sem_cfg = st.tabs(["Ordens de fabricação", "Corridas", "Resumo"])
+        tab1, tab2, tab3, tab4 = _tabs_sem_cfg[0], _tabs_sem_cfg[1], _tabs_sem_cfg[2], None
 
     with tab1:
         if not ofs:
@@ -1300,8 +1307,9 @@ def pagina_relatorios() -> None:
                     _col_alt, _col_exc = st.columns(2)
 
                     # ── Alterar ──────────────────────────────────────────────
-                    with _col_alt:
-                        with st.expander("✏️ Alterar dados desta OF", expanded=False):
+                    if pode_alterar_of:
+                     with _col_alt:
+                      with st.expander("✏️ Alterar dados desta OF", expanded=False):
                             try:
                                 with db_session() as _db_ed:
                                     _of_ed = _db_ed.scalar(
@@ -1562,8 +1570,9 @@ def pagina_relatorios() -> None:
                 _cc1, _cc2 = st.columns(2)
 
                 # ── Alterar Corrida ───────────────────────────────────────
-                with _cc1:
-                    with st.expander("✏️ Alterar dados desta corrida", expanded=False):
+                if pode_alterar_corrida:
+                 with _cc1:
+                  with st.expander("✏️ Alterar dados desta corrida", expanded=False):
                         try:
                             with db_session() as _db_ced:
                                 _corr_ed = _db_ced.scalar(select(Corrida).where(Corrida.id == _id_corr_sel))
@@ -1653,7 +1662,8 @@ def pagina_relatorios() -> None:
             st.subheader("Peças pedidas por cliente")
             st.dataframe(formatar_datas_br(por_cliente), use_container_width=True, hide_index=True)
 
-    with tab4:
+    if tab4:
+     with tab4:
         st.subheader("\U0001f5c4\ufe0f Limpeza de Dados")
         st.caption("Use com cautela — esta ação **não pode ser desfeita**.")
         st.divider()
