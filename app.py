@@ -22,10 +22,6 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.sqlite_models import CertificadoPeca, Corrida, OrdemEntrega, OrdemFabricacao
 from fundicao_db import SessionLocal, init_db, ping_database
-from auth import (
-    init_auth_db, tela_login, tela_admin_usuarios,
-    tem_permissao, usuario_logado, fazer_logout, PERMISSOES,
-)
 
 # sqlite3 removido — agora usa PostgreSQL via SQLAlchemy
 
@@ -1307,8 +1303,8 @@ def pagina_relatorios() -> None:
                     with _col_alt:
                         if not tem_permissao("relatorios_alterar_of"):
                             st.info("Sem permissao para alterar OFs.")
-                        elif True:
-                        with st.expander("✏️ Alterar dados desta OF", expanded=False):
+                        else:
+                            with st.expander("✏️ Alterar dados desta OF", expanded=False):
                             try:
                                 with db_session() as _db_ed:
                                     _of_ed = _db_ed.scalar(
@@ -1572,8 +1568,8 @@ def pagina_relatorios() -> None:
                 with _cc1:
                     if not tem_permissao("relatorios_alterar_corrida"):
                         st.info("Sem permissao para alterar corridas.")
-                    elif True:
-                    with st.expander("✏️ Alterar dados desta corrida", expanded=False):
+                    else:
+                        with st.expander("✏️ Alterar dados desta corrida", expanded=False):
                         try:
                             with db_session() as _db_ced:
                                 _corr_ed = _db_ced.scalar(select(Corrida).where(Corrida.id == _id_corr_sel))
@@ -1665,7 +1661,7 @@ def pagina_relatorios() -> None:
 
     with tab4:
         if not tem_permissao("configuracoes"):
-            st.warning("Voce nao tem permissao para acessar as Configuracoes.")
+            st.warning("Sem permissao para acessar Configuracoes.")
             st.stop()
         st.subheader("\U0001f5c4\ufe0f Limpeza de Dados")
         st.caption("Use com cautela — esta ação **não pode ser desfeita**.")
@@ -2441,16 +2437,8 @@ def main() -> None:
     )
 
     init_db()
-    init_auth_db()
     _migrar_banco_of_status()   # garante coluna status_of
     _migrar_banco_corridas()     # garante constraint correta em bancos existentes
-
-    # ── Verificação de login ──────────────────────────────────────────────
-    if not tela_login():
-        st.stop()
-
-    # ── Logout na sidebar ─────────────────────────────────────────────────
-    u = usuario_logado()
 
     if 'mostrar_importador' not in st.session_state:
         st.session_state.mostrar_importador = False
@@ -2463,13 +2451,6 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Sistema de Controle de Fundição")
-        # Info do usuário logado + logout
-        _u = usuario_logado()
-        if _u:
-            st.caption(f"👤 **{_u['nome']}**")
-            if st.button("🚪 Sair", key="btn_logout"):
-                fazer_logout()
-                st.rerun()
         ok, msg = ping_database()
         if ok:
             st.success(msg)
@@ -2477,27 +2458,20 @@ def main() -> None:
             st.error("Falha ao acessar o banco")
             st.caption(msg)
         st.divider()
-        if tem_permissao("importar_excel") and st.button("📥 Importar Planilha Excel"):
+        if st.button("📥 Importar Planilha Excel"):
             st.session_state.mostrar_importador = True
-        # Monta menu de acordo com permissões do usuário
-        _opcoes_nav = []
-        if tem_permissao("dashboard"):          _opcoes_nav.append("Dashboard")
-        if tem_permissao("nova_of"):            _opcoes_nav.append("Nova Ordem de Fabricação")
-        if tem_permissao("nova_oe"):            _opcoes_nav.append("Nova Ordem de Entrega")
-        if tem_permissao("consulta_oes"):       _opcoes_nav.append("Consulta de OEs")
-        if tem_permissao("lancar_corrida"):     _opcoes_nav.append("Lançar Corrida")
-        if tem_permissao("consulta_rastreab"):  _opcoes_nav.append("Consulta de Rastreabilidade")
-        if tem_permissao("consulta_corridas"):  _opcoes_nav.append("Consulta de Corridas")
-        if tem_permissao("relatorios"):         _opcoes_nav.append("Relatórios")
-        if tem_permissao("admin"):              _opcoes_nav.append("⚙️ Administração")
-
-        if not _opcoes_nav:
-            st.warning("Você não tem acesso a nenhum módulo.")
-            st.stop()
-
         pagina = st.radio(
             "Navegação",
-            _opcoes_nav,
+            (
+                "Dashboard",
+                "Nova Ordem de Fabricação",
+                "Nova Ordem de Entrega",
+                "Consulta de OEs",
+                "Lançar Corrida",
+                "Consulta de Rastreabilidade",
+                "Consulta de Corridas",
+                "Relatórios",
+            ),
             label_visibility="collapsed",
         )
 
@@ -2515,8 +2489,6 @@ def main() -> None:
         pagina_consulta_rastreabilidade()
     elif pagina == "Consulta de Corridas":
         pagina_consulta_corridas()
-    elif pagina == "⚙️ Administração":
-        tela_admin_usuarios()
     else:
         pagina_relatorios()
 
