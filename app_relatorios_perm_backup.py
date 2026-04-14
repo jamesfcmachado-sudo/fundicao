@@ -1305,9 +1305,6 @@ def pagina_relatorios() -> None:
 
                     # ── Alterar ──────────────────────────────────────────────
                     with _col_alt:
-                        if not tem_permissao("relatorios_alterar_of"):
-                            st.info("Sem permissao para alterar OFs.")
-                        elif True:
                         with st.expander("✏️ Alterar dados desta OF", expanded=False):
                             try:
                                 with db_session() as _db_ed:
@@ -1570,9 +1567,6 @@ def pagina_relatorios() -> None:
 
                 # ── Alterar Corrida ───────────────────────────────────────
                 with _cc1:
-                    if not tem_permissao("relatorios_alterar_corrida"):
-                        st.info("Sem permissao para alterar corridas.")
-                    elif True:
                     with st.expander("✏️ Alterar dados desta corrida", expanded=False):
                         try:
                             with db_session() as _db_ced:
@@ -1664,9 +1658,6 @@ def pagina_relatorios() -> None:
             st.dataframe(formatar_datas_br(por_cliente), use_container_width=True, hide_index=True)
 
     with tab4:
-        if not tem_permissao("configuracoes"):
-            st.warning("Voce nao tem permissao para acessar as Configuracoes.")
-            st.stop()
         st.subheader("\U0001f5c4\ufe0f Limpeza de Dados")
         st.caption("Use com cautela — esta ação **não pode ser desfeita**.")
         st.divider()
