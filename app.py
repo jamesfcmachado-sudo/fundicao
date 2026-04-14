@@ -1205,6 +1205,7 @@ def _chave_of(codigo: str) -> tuple:
 def pagina_relatorios() -> None:
     st.title("Relatórios")
     pode_alterar_of = tem_permissao("relatorios_alterar_of")
+    pode_excluir_of = tem_permissao("relatorios_excluir_of")
     pode_alterar_corrida = tem_permissao("relatorios_alterar_corrida")
     pode_configuracoes = tem_permissao("configuracoes")
     st.caption("Consultas e exportação a partir de **fundicao.db**.")
@@ -1439,8 +1440,9 @@ def pagina_relatorios() -> None:
                                             st.error(f"Erro ao salvar: {_ex}")
 
                     # ── Excluir ──────────────────────────────────────────────
-                    with _col_exc:
-                        with st.expander("🗑️ Excluir esta OF", expanded=False):
+                    if pode_excluir_of:
+                     with _col_exc:
+                      with st.expander("🗑️ Excluir esta OF", expanded=False):
                             st.warning(f"Isso excluirá a OF **{_nof_sel}** e todos os seus registros vinculados (OEs, certificados). Esta ação **não pode ser desfeita**.")
                             if st.button(f"⚠️ Confirmar exclusão de {_nof_sel}", key=f"btn_exc_of_{_nof_sel}", type="primary"):
                                 try:
