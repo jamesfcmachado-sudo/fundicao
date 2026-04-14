@@ -1207,6 +1207,7 @@ def pagina_relatorios() -> None:
     pode_alterar_of = tem_permissao("relatorios_alterar_of")
     pode_excluir_of = tem_permissao("relatorios_excluir_of")
     pode_alterar_corrida = tem_permissao("relatorios_alterar_corrida")
+    pode_excluir_corrida = tem_permissao("relatorios_excluir_corrida")
     pode_configuracoes = tem_permissao("configuracoes")
     st.caption("Consultas e exportação a partir de **fundicao.db**.")
 
@@ -1640,8 +1641,9 @@ def pagina_relatorios() -> None:
                                         st.error(f"Erro ao salvar: {_ex}")
 
                 # ── Excluir Corrida ───────────────────────────────────────
-                with _cc2:
-                    with st.expander("🗑️ Excluir esta corrida", expanded=False):
+                if pode_excluir_corrida:
+                 with _cc2:
+                  with st.expander("🗑️ Excluir esta corrida", expanded=False):
                         st.warning(f"Isso excluirá permanentemente esta corrida. **Esta ação não pode ser desfeita**.")
                         if st.button("⚠️ Confirmar exclusão", key=f"btn_exc_corr_{_id_corr_sel}", type="primary"):
                             try:

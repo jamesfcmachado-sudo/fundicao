@@ -27,6 +27,7 @@ PERMISSOES = {
     "relatorios_alterar_of":  "Relatórios → Alterar OF",
     "relatorios_excluir_of":  "Relatórios → Excluir OF",
     "relatorios_alterar_corrida": "Relatórios → Alterar Corridas",
+    "relatorios_excluir_corrida": "Relatórios → Excluir Corridas",
     "configuracoes":          "Configurações",
     "admin":                  "Administrador (acesso total)",
 }
