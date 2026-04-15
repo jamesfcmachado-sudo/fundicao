@@ -1256,7 +1256,7 @@ def pagina_relatorios() -> None:
                 df["_sort_of"] = df["Nº OF"].fillna("").apply(_chave_of)
                 df = df.sort_values(
                     by=["_sort_ano", "_sort_of"],
-                    ascending=[True, True],
+                    ascending=[False, False],
                     na_position="last",
                 ).drop(columns=["_sort_ano", "_sort_of"]).reset_index(drop=True)
 
@@ -1516,7 +1516,7 @@ def pagina_relatorios() -> None:
                 df["_sort_corrida"] = df["Corrida"].fillna("").apply(_chave_of)
                 df = df.sort_values(
                     by=["_sort_data", "_sort_corrida"],
-                    ascending=[True, True],
+                    ascending=[False, False],
                     na_position="last",
                 ).drop(columns=["_sort_data", "_sort_corrida"]).reset_index(drop=True)
 
