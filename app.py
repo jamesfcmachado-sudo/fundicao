@@ -402,9 +402,10 @@ def pagina_dashboard():
             "Vlr Total (R$)":  st.column_config.NumberColumn("Vlr Total (R$)",  format="%.2f"),
         }
 
+        _altura_dash = st.slider("Altura da tabela (linhas)", min_value=200, max_value=1200, value=400, step=50, key="altura_dash")
         st.dataframe(
             _df_dash.style.apply(_style_canceladas, axis=1),
-            height=400,
+            height=_altura_dash,
             use_container_width=True,
             hide_index=True,
             column_config=_DASH_COL_CFG,
@@ -1288,9 +1289,10 @@ def pagina_relatorios() -> None:
 
             # O numero_of é lido diretamente do df já ordenado — garante correspondência exata
             st.caption("Clique no ☐ à esquerda da linha para selecionar uma OF e usar as opções abaixo.")
+            _altura_of = st.slider("Altura da tabela (px)", min_value=200, max_value=1400, value=500, step=50, key="altura_of")
             sel_of = st.dataframe(
                 df,
-                height=500,
+                height=_altura_of,
                 use_container_width=True,
                 hide_index=True,
                 column_config=_OF_COL_CFG,
@@ -1543,9 +1545,10 @@ def pagina_relatorios() -> None:
                 _ids_corr_ord = _ids_corr
 
             st.caption("Clique no ☐ à esquerda da linha para selecionar uma corrida e usar as opções abaixo.")
+            _altura_corr = st.slider("Altura da tabela (px)", min_value=200, max_value=1400, value=400, step=50, key="altura_corr")
             sel_corr = st.dataframe(
                 df,
-                height=400,
+                height=_altura_corr,
                 use_container_width=True,
                 hide_index=True,
                 column_config=col_config,
