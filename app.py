@@ -461,13 +461,9 @@ def pagina_nova_of() -> None:
     except Exception:
         _opts_cliente = _opts_modelo = _opts_descr = _opts_desenho = _opts_liga = _opts_norma = []
 
-    st.markdown("##### Ordens de entrega (OE) e certificados")
-    st.caption("Defina quantas linhas deseja preencher (fora do formulário principal).")
-    colx, coly = st.columns(2)
-    with colx:
-        n_oes = st.number_input("Quantas OEs?", min_value=0, max_value=30, value=0, step=1)
-    with coly:
-        n_certs = st.number_input("Quantos certificados?", min_value=0, max_value=30, value=0, step=1)
+    # Campos de OE e certificados removidos - usar abas especificas
+    n_oes = 0
+    n_certs = 0
 
     with st.form("form_nova_of", clear_on_submit=True):
         st.markdown("##### Dados da OF")
