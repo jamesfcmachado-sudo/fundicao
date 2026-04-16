@@ -767,8 +767,14 @@ def pagina_lancar_corrida() -> None:
     if not enviar:
         return
 
-    if not numero_corrida.strip() or not nome_cliente.strip():
-        st.error("Preencha número da corrida e nome do cliente.")
+    if not numero_corrida.strip():
+        st.error("Preencha o numero da corrida.")
+        return
+    if not nome_cliente.strip():
+        st.error("Preencha o nome do cliente. Este campo e obrigatorio.")
+        return
+    if not data_fusao:
+        st.error("Preencha a data de fusao.")
         return
 
     if not codigo_op_ou_corrida_valido(numero_corrida):
