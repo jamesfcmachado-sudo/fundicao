@@ -3272,38 +3272,22 @@ def pagina_nova_oe():
     st.divider()
     with st.expander("📚 Histórico de Ordens de Entrega emitidas", expanded=False):
         try:
-            import sqlite3 as _sq
-            from fundicao_db import DB_PATH as _FP
-            _cx = _sq.connect(str(_FP))
-            cols = {r[1] for r in _cx.execute("PRAGMA table_info(ordem_entrega)").fetchall()}
-            if 'numero_oe_seq' in cols:
-                rows = _cx.execute("""
-                    SELECT oe.numero_oe, oe.numero_oe_seq, of.numero_of, of.nome_cliente,
+            from fundicao_db import engine as _eng
+            from sqlalchemy import text as _text
+            with _eng.connect() as _conn:
+                rows = _conn.execute(_text("""
+                    SELECT oe.numero_oe, of.numero_of, of.nome_cliente,
                            oe.qtd_pecas, oe.data_prevista, oe.observacao
                     FROM ordem_entrega oe
                     JOIN ordem_fabricacao of ON of.id = oe.ordem_fabricacao_id
-                    ORDER BY oe.numero_oe_seq DESC NULLS LAST, oe.criado_em DESC
+                    ORDER BY oe.criado_em DESC
                     LIMIT 200
-                """).fetchall()
-                _cx.close()
-                if rows:
-                    df_hist = pd.DataFrame(rows, columns=['Nº OE', 'Seq', 'OF', 'Cliente', 'Qtd Peças', 'Data', 'Observação'])
-                    st.dataframe(df_hist, use_container_width=True, hide_index=True)
-                else:
-                    st.info("Nenhuma OE registrada ainda.")
+                """)).fetchall()
+            if rows:
+                df_hist = pd.DataFrame(rows, columns=['Nº OE', 'OF', 'Cliente', 'Qtd Peças', 'Data', 'Observação'])
+                st.dataframe(df_hist, use_container_width=True, hide_index=True)
             else:
-                rows = _cx.execute("""
-                    SELECT oe.numero_oe, of.numero_of, of.nome_cliente, oe.qtd_pecas, oe.data_prevista
-                    FROM ordem_entrega oe
-                    JOIN ordem_fabricacao of ON of.id = oe.ordem_fabricacao_id
-                    ORDER BY oe.criado_em DESC LIMIT 200
-                """).fetchall()
-                _cx.close()
-                if rows:
-                    df_hist = pd.DataFrame(rows, columns=['Nº OE', 'OF', 'Cliente', 'Qtd Peças', 'Data'])
-                    st.dataframe(df_hist, use_container_width=True, hide_index=True)
-                else:
-                    st.info("Nenhuma OE registrada ainda.")
+                st.info("Nenhuma OE registrada ainda.")
         except Exception as e:
             st.error(f"Erro ao carregar histórico: {e}")
 
