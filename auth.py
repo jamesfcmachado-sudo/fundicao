@@ -4,6 +4,7 @@ Tabela `usuario` no banco PostgreSQL (criada automaticamente).
 """
 
 from __future__ import annotations
+# empresa_config importado dentro das funcoes para evitar circular import
 
 import hashlib
 import os
@@ -192,17 +193,33 @@ def tela_login() -> bool:
 
 # ── Tela de Administração de Usuários ─────────────────────────────────────────
 def tela_admin_usuarios() -> None:
-    """Tela completa de gerenciamento de usuários (apenas admin)."""
+    """Tela completa de gerenciamento de usuarios e configuracoes (apenas admin)."""
     if not tem_permissao("admin"):
-        st.error("⛔ Acesso negado. Apenas administradores podem acessar esta tela.")
+        st.error("Acesso negado. Apenas administradores podem acessar esta tela.")
         return
 
-    st.title("⚙️ Administração de Usuários")
-    st.caption("Gerencie os usuários e suas permissões de acesso ao sistema.")
+    st.title("⚙️ Administração")
+
+    _tab_usr, _tab_cfg, _tab_new = st.tabs([
+        "👥 Usuários cadastrados",
+        "🏭 Configurações da Empresa",
+        "➕ Novo usuário",
+    ])
+
+    with _tab_cfg:
+        from empresa_config import tela_configuracoes_empresa
+        tela_configuracoes_empresa()
 
     engine = _get_engine()
 
-    aba1, aba2 = st.tabs(["👥 Usuários cadastrados", "➕ Novo usuário"])
+    with _tab_usr:
+     aba1 = _tab_usr
+    with _tab_new:
+     aba2 = _tab_new
+    aba1, aba2 = _tab_usr, _tab_new
+    if True:  # bloco usuarios
+     pass
+    aba1, aba2 = _tab_usr, _tab_new
 
     # ── ABA 1: Listar e editar usuários ──────────────────────────────────────
     with aba1:

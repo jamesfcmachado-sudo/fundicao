@@ -22,6 +22,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.sqlite_models import CertificadoPeca, Corrida, OrdemEntrega, OrdemFabricacao
 from fundicao_db import SessionLocal, init_db, ping_database
+from empresa_config import (
+    init_config_db, tela_configuracoes_empresa,
+    get_config, get_logo_ativo_bytes,
+)
 from auth import (
     init_auth_db, tela_login, tela_admin_usuarios,
     tem_permissao, usuario_logado, fazer_logout, PERMISSOES,
@@ -2756,6 +2760,7 @@ def main() -> None:
 
     init_db()
     init_auth_db()
+    init_config_db()
     _migrar_banco_of_status()   # garante coluna status_of
     _migrar_banco_corridas()     # garante constraint correta em bancos existentes
 
