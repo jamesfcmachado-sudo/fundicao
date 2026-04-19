@@ -3551,12 +3551,28 @@ def pagina_consulta_oes():
                             observacoes=_obs_oe,
                             config=_cfg,
                         )
+                        from gerar_oe_excel import gerar_oe_pdf
+                        _pdf_bytes = gerar_oe_pdf(
+                            numero_oe=str(_noe),
+                            nome_cliente=_cliente_oe,
+                            itens=_itens_lista,
+                            observacoes=_obs_oe,
+                            config=_cfg,
+                        )
                         st.download_button(
-                            f"⬇️ Baixar OE {_noe} preenchida (.xlsx)",
+                            f"⬇️ Baixar OE {_noe} em PDF",
+                            data=_pdf_bytes,
+                            file_name=f"OE_{_noe}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_oe_{_noe}",
+                        )
+                        # Tambem oferece Excel com formulas
+                        st.download_button(
+                            f"📊 Baixar OE {_noe} em Excel (com fórmulas)",
                             data=_excel_bytes,
                             file_name=f"OE_{_noe}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            key=f"dl_oe_{_noe}",
+                            key=f"dl_xlsx_{_noe}",
                         )
                         st.success(f"OE {_noe} gerada com {len(_itens_lista)} item(ns)!")
                     except Exception as _ex:
