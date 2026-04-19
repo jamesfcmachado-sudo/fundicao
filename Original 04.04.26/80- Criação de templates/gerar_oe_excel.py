@@ -356,3 +356,47 @@ def configurar_impressao_excel(excel_bytes, orientacao="Paisagem"):
         return out.read()
     except Exception:
         return excel_bytes
+
+
+def excel_para_pdf(excel_bytes: bytes) -> bytes | None:
+    """
+    Converte Excel para PDF usando LibreOffice.
+    Retorna bytes do PDF ou None se falhar.
+    """
+    import subprocess
+    import tempfile
+    import os
+
+    try:
+        # Salva Excel em arquivo temporario
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as f:
+            f.write(excel_bytes)
+            xlsx_path = f.name
+
+        # Diretorio temporario para output
+        out_dir = tempfile.mkdtemp()
+
+        # Converte usando LibreOffice
+        result = subprocess.run([
+            'libreoffice', '--headless', '--convert-to', 'pdf',
+            '--outdir', out_dir, xlsx_path
+        ], capture_output=True, timeout=30)
+
+        # Busca o PDF gerado
+        pdf_name = os.path.splitext(os.path.basename(xlsx_path))[0] + '.pdf'
+        pdf_path = os.path.join(out_dir, pdf_name)
+
+        if os.path.exists(pdf_path):
+            with open(pdf_path, 'rb') as f:
+                pdf_bytes = f.read()
+            # Limpa arquivos temporarios
+            os.unlink(xlsx_path)
+            os.unlink(pdf_path)
+            os.rmdir(out_dir)
+            return pdf_bytes
+        else:
+            os.unlink(xlsx_path)
+            return None
+
+    except Exception:
+        return None
