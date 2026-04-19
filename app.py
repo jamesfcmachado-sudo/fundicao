@@ -3041,18 +3041,16 @@ def pagina_nova_oe():
     _migrar_banco_oe()
     st.title("📦 Nova Ordem de Entrega")
 
-    # ── Carregar próximo número sequencial ─────────────────────────────────
+    # ── Carregar próximo número sequencial via PostgreSQL ───────────────────
     try:
-        import sqlite3 as _sq
-        from fundicao_db import DB_PATH as _FP
-        _cx = _sq.connect(str(_FP))
-        _cols = {r[1] for r in _cx.execute("PRAGMA table_info(ordem_entrega)").fetchall()}
-        if 'numero_oe_seq' in _cols:
-            row = _cx.execute("SELECT MAX(numero_oe_seq) FROM ordem_entrega").fetchone()
-            proximo_num = (row[0] or 1627) + 1
-        else:
-            proximo_num = 1629
-        _cx.close()
+        from fundicao_db import engine as _eng_oe
+        from sqlalchemy import text as _text_oe
+        with _eng_oe.connect() as _conn_oe:
+            _row = _conn_oe.execute(_text_oe(
+                "SELECT MAX(CAST(numero_oe AS INTEGER)) FROM ordem_entrega "
+                "WHERE numero_oe ~ '^[0-9]+$'"
+            )).fetchone()
+            proximo_num = (_row[0] or 1628) + 1
     except Exception:
         proximo_num = 1629
 
@@ -3201,18 +3199,10 @@ def pagina_nova_oe():
         if gravar:
             try:
                 numero_oe_str = str(int(num_oe))
-                # Verifica se número já existe
-                import sqlite3 as _sq
-                from fundicao_db import DB_PATH as _FP
-                _cx2 = _sq.connect(str(_FP))
-                existing = _cx2.execute(
-                    "SELECT COUNT(*) FROM ordem_entrega WHERE numero_oe=? AND ordem_fabricacao_id=(SELECT id FROM ordem_fabricacao WHERE numero_of=?)",
-                    (numero_oe_str, of_selecionada)
-                ).fetchone()[0]
-                _cx2.close()
-
+                now = datetime.now().astimezone()
                 with db_session() as db:
-                    of_db = db.scalar(select(OrdemFabricacao).where(OrdemFabricacao.numero_of == of_selecionada))
+                    of_db = db.scalar(select(OrdemFabricacao).where(
+                        OrdemFabricacao.numero_of == of_selecionada))
                     if not of_db:
                         st.error("OF não encontrada no banco.")
                     else:
@@ -3221,54 +3211,129 @@ def pagina_nova_oe():
                             qtd_pecas=total_qtd_oe,
                             data_prevista=data_emissao,
                             observacao=observacoes,
-                            criado_em=datetime.now(),
+                            criado_em=now,
                         )
                         of_db.ordens_entrega.append(oe)
-                        db.flush()
-                        # Gravar campos extras via sqlite3 direto
-                        import sqlite3 as _sq2
-                        from fundicao_db import DB_PATH as _FP2
-                        _cx3 = _sq2.connect(str(_FP2))
-                        _cx3.execute(
-                            "UPDATE ordem_entrega SET numero_oe_seq=?, data_emissao=?, transportadora=?, placa_veiculo=?, nota_fiscal=? WHERE id=?",
-                            (int(num_oe), str(data_emissao), transportadora, placa_veiculo, nota_fiscal, oe.id)
-                        )
-                        _cx3.commit()
-                        _cx3.close()
-                st.success(f"✅ OE Nº {numero_oe_str} gravada com sucesso para a OF {of_selecionada}!")
-                st.session_state['_oe_gravada_dados'] = {
-                    'numero_oe': numero_oe_str,
-                    'data_emissao': str(data_emissao),
-                    'transportadora': transportadora,
-                    'placa_veiculo': placa_veiculo,
-                    'nota_fiscal': nota_fiscal,
-                    'observacoes': observacoes,
-                    'itens': itens,
-                }
+
+                # Grava itens na tabela oe_item
+                import uuid as _uuid
+                from fundicao_db import engine as _eng2
+                from sqlalchemy import text as _text2
+                with _eng2.begin() as _conn2:
+                    for it in itens:
+                        _conn2.execute(_text2("""
+                            INSERT INTO oe_item (
+                                id, numero_oe, num_oe_seq, nome_cliente,
+                                num_pedido, num_of, referencia, liga, corrida,
+                                certificado, cod_peca, descricao,
+                                peso_unit, qtd, serie, preco_unit, preco_total,
+                                observacoes, criado_em
+                            ) VALUES (
+                                :id, :noe, :seq, :cliente,
+                                :pedido, :of, :ref, :liga, :corr,
+                                :cert, :cod, :desc,
+                                :peso, :qtd, :serie, :pu, :pt,
+                                :obs, NOW()
+                            )
+                        """), {
+                            "id":      str(_uuid.uuid4()),
+                            "noe":     numero_oe_str,
+                            "seq":     int(num_oe),
+                            "cliente": of_obj.nome_cliente or "",
+                            "pedido":  it.get("pedido",""),
+                            "of":      it.get("of",""),
+                            "ref":     it.get("referencia",""),
+                            "liga":    it.get("liga",""),
+                            "corr":    it.get("corrida",""),
+                            "cert":    it.get("certificado",""),
+                            "cod":     it.get("codigo_peca",""),
+                            "desc":    it.get("descricao",""),
+                            "peso":    float(it.get("peso_unit",0) or 0),
+                            "qtd":     int(it.get("qtd",0) or 0),
+                            "serie":   it.get("serie",""),
+                            "pu":      float(it.get("preco_unit",0) or 0),
+                            "pt":      float(it.get("preco_total",0) or 0),
+                            "obs":     observacoes or "",
+                        })
+
+                st.success(f"✅ OE Nº {numero_oe_str} gravada com sucesso!")
+                st.session_state['_oe_gravada_itens'] = itens
+                st.session_state['_oe_gravada_num'] = numero_oe_str
+                st.session_state['_oe_gravada_obs'] = observacoes
+                st.session_state['_oe_gravada_cliente'] = of_obj.nome_cliente or ""
+                st.rerun()
             except Exception as e:
                 st.error(f"Erro ao gravar: {e}")
 
-        if gerar_pdf:
-            oe_data = st.session_state.get('_oe_gravada_dados', {
-                'numero_oe': str(int(num_oe)),
-                'data_emissao': str(data_emissao),
-                'transportadora': transportadora,
-                'placa_veiculo': placa_veiculo,
-                'nota_fiscal': nota_fiscal,
-                'observacoes': observacoes,
-                'itens': itens,
-            })
-            try:
-                pdf_bytes = _gerar_pdf_oe(oe_data, of_obj)
-                st.download_button(
-                    "⬇️ Baixar PDF da OE",
-                    data=pdf_bytes,
-                    file_name=f"OE_{oe_data['numero_oe']}_OF_{of_obj.numero_of}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                )
-            except Exception as e:
-                st.error(f"Erro ao gerar PDF: {e}")
+        # ── Botoes PDF e Excel apos gravar ────────────────────────────────
+        _num_gravado = st.session_state.get('_oe_gravada_num','')
+        if _num_gravado and str(int(num_oe)) == _num_gravado:
+            _itens_grav = st.session_state.get('_oe_gravada_itens', itens)
+            _obs_grav   = st.session_state.get('_oe_gravada_obs', observacoes)
+            _cli_grav   = st.session_state.get('_oe_gravada_cliente', of_obj.nome_cliente if of_obj else "")
+            _tmpl_b64   = get_config("template_oe_base64","")
+            if _tmpl_b64:
+                st.divider()
+                st.success(f"OE {_num_gravado} gravada! Gere os documentos:")
+                _itens_pdf = [{
+                    "num_pedido":  it.get("pedido",""),
+                    "num_of":      it.get("of",""),
+                    "referencia":  it.get("referencia",""),
+                    "liga":        it.get("liga",""),
+                    "corrida":     it.get("corrida",""),
+                    "certificado": it.get("certificado",""),
+                    "cod_peca":    it.get("codigo_peca",""),
+                    "descricao":   it.get("descricao",""),
+                    "peso_unit":   float(it.get("peso_unit",0) or 0),
+                    "qtd":         int(it.get("qtd",0) or 0),
+                    "serie":       it.get("serie",""),
+                    "preco_unit":  float(it.get("preco_unit",0) or 0),
+                    "preco_total": float(it.get("preco_total",0) or 0),
+                } for it in _itens_grav]
+                _cfg_oe = {
+                    "nome_empresa": get_config("nome_empresa"),
+                    "endereco":     get_config("endereco"),
+                    "bairro":       get_config("bairro"),
+                    "cidade":       get_config("cidade"),
+                    "estado":       get_config("estado"),
+                    "telefone":     get_config("telefone"),
+                    "email":        get_config("email"),
+                    "contato":      get_config("template_oe_responsavel") or get_config("contato"),
+                    "rodape_pdf":   get_config("rodape_pdf"),
+                    "orientacao":   get_config("template_oe_orientacao","Paisagem"),
+                }
+                _logo_bts = None
+                try:
+                    from empresa_config import get_logo_ativo_bytes
+                    _logo_bts = get_logo_ativo_bytes()
+                except Exception:
+                    pass
+                import base64 as _b64m
+                _tmpl_bts = _b64m.b64decode(_tmpl_b64)
+                from gerar_oe_excel import gerar_oe_excel, gerar_oe_pdf, configurar_impressao_excel
+                _excel_bts = gerar_oe_excel(_tmpl_bts, _num_gravado, _cli_grav,
+                                             _itens_pdf, _obs_grav, _cfg_oe, _logo_bts)
+                _excel_bts = configurar_impressao_excel(_excel_bts, _cfg_oe.get("orientacao","Paisagem"))
+                _pdf_bts   = gerar_oe_pdf(_num_gravado, _cli_grav, _itens_pdf,
+                                           _obs_grav, _cfg_oe, _logo_bts)
+                _db1, _db2 = st.columns(2)
+                with _db1:
+                    st.download_button(
+                        f"⬇️ Baixar OE {_num_gravado} em PDF",
+                        data=_pdf_bts,
+                        file_name=f"OE_{_num_gravado}.pdf",
+                        mime="application/pdf",
+                        key="dl_nova_oe_pdf",
+                        type="primary",
+                    )
+                with _db2:
+                    st.download_button(
+                        f"📊 Baixar OE {_num_gravado} em Excel",
+                        data=_excel_bts,
+                        file_name=f"OE_{_num_gravado}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="dl_nova_oe_xlsx",
+                    )
 
     elif of_selecionada is not None and not of_obj:
         st.warning("OF não encontrada no banco de dados.")
