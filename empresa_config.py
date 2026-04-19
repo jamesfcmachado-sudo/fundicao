@@ -126,11 +126,12 @@ def tela_configuracoes_empresa() -> None:
     st.title("🏭 Configurações da Empresa")
     st.caption("Personalize as informações da empresa que aparecerão nos relatórios, PDFs e templates.")
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🏢 Dados da Empresa",
         "🖼️ Logotipos",
         "🔢 Numeração e Siglas",
         "📄 Relatórios e PDFs",
+        "📋 Templates",
     ])
 
     # ── ABA 1: Dados da empresa ───────────────────────────────────────────────
@@ -297,6 +298,62 @@ def tela_configuracoes_empresa() -> None:
             set_config("sigla_campo_oe", sigla_oe)
             st.success("✅ Numeração e siglas salvas!")
             st.info("⚠️ O novo formato de numeração será aplicado nos próximos lançamentos.")
+
+
+    # ── ABA 5: Templates ──────────────────────────────────────────────────────
+    with tab5:
+        st.subheader("Templates de documentos")
+        st.caption("Faça upload dos templates Excel para geração automática de documentos.")
+
+        st.markdown("##### Template — Ordem de Entrega (OE)")
+        _oe_tmpl = get_config("template_oe_base64", "")
+        if _oe_tmpl:
+            st.success(f"Template OE cadastrado: {get_config('template_oe_nome')}")
+            if st.button("🗑️ Remover template OE", key="btn_rm_tmpl_oe"):
+                set_config("template_oe_base64", "")
+                set_config("template_oe_nome", "")
+                st.rerun()
+        else:
+            st.info("Nenhum template de OE cadastrado.")
+
+        _up_oe = st.file_uploader(
+            "Carregar template de OE (.xlsx)",
+            type=["xlsx"],
+            key="upload_tmpl_oe"
+        )
+        if _up_oe:
+            import base64
+            _b64 = base64.b64encode(_up_oe.read()).decode()
+            set_config("template_oe_base64", _b64)
+            set_config("template_oe_nome", _up_oe.name)
+            st.success(f"✅ Template OE salvo: {_up_oe.name}")
+            st.rerun()
+
+        st.divider()
+
+        st.markdown("##### Template — Certificado de Qualidade")
+        _cert_tmpl = get_config("template_cert_base64", "")
+        if _cert_tmpl:
+            st.success(f"Template Certificado cadastrado: {get_config('template_cert_nome')}")
+            if st.button("🗑️ Remover template Certificado", key="btn_rm_tmpl_cert"):
+                set_config("template_cert_base64", "")
+                set_config("template_cert_nome", "")
+                st.rerun()
+        else:
+            st.info("Nenhum template de Certificado cadastrado.")
+
+        _up_cert = st.file_uploader(
+            "Carregar template de Certificado (.xlsx)",
+            type=["xlsx"],
+            key="upload_tmpl_cert"
+        )
+        if _up_cert:
+            import base64
+            _b64 = base64.b64encode(_up_cert.read()).decode()
+            set_config("template_cert_base64", _b64)
+            set_config("template_cert_nome", _up_cert.name)
+            st.success(f"✅ Template Certificado salvo: {_up_cert.name}")
+            st.rerun()
 
     # ── ABA 4: Relatórios e PDFs ──────────────────────────────────────────────
     with tab4:

@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.sqlite_models import CertificadoPeca, Corrida, OrdemEntrega, OrdemFabricacao
 from fundicao_db import SessionLocal, init_db, ping_database
+from gerar_oe_excel import gerar_oe_excel
 from empresa_config import (
     init_config_db, tela_configuracoes_empresa,
     get_config, get_logo_ativo_bytes,
