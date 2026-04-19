@@ -3826,12 +3826,22 @@ def pagina_consulta_oes():
             _ofs_lista = [r[0] for r in _ofs_disp]
             _of_idx = _ofs_lista.index(_of_atual) if _of_atual in _ofs_lista else 0
 
-            _edit_of = st.selectbox(
-                "Ordem de Fabricação (OF)",
-                options=_ofs_lista,
-                index=_of_idx,
-                key="edit_of_cons"
+            # Campo de texto com sugestoes para buscar OF
+            _edit_of_texto = st.text_input(
+                "Ordem de Fabricação (OF) — Digite o número",
+                value=_of_atual,
+                key="edit_of_texto",
+                placeholder="Ex: 015B6"
             )
+            # Filtra sugestoes com base no que foi digitado
+            if _edit_of_texto:
+                _sugestoes = [o for o in _ofs_lista
+                              if _edit_of_texto.upper() in o.upper()][:10]
+                if _sugestoes and _edit_of_texto not in _ofs_lista:
+                    st.caption(f"Sugestões: {', '.join(_sugestoes)}")
+            _edit_of = _edit_of_texto.strip() if _edit_of_texto.strip() in _ofs_lista else _of_atual
+            if _edit_of_texto.strip() and _edit_of_texto.strip() not in _ofs_lista:
+                st.warning(f"OF '{_edit_of_texto}' não encontrada. Usando OF atual: {_of_atual}")
 
             # Se OF mudou, carrega dados da nova OF
             _of_changed = _edit_of != _of_atual
