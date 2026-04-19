@@ -325,29 +325,24 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="", config=None, lo
 
 def configurar_impressao_excel(excel_bytes, orientacao="Paisagem"):
     """Configura orientacao de impressao no Excel e retorna bytes."""
-    from openpyxl import load_workbook
-    from openpyxl.worksheet.page import PageMargins
-
-    wb = load_workbook(io.BytesIO(excel_bytes))
-    for ws in wb.worksheets:
-        try:
-            # Garante que sheet_properties existe
-            if ws.sheet_properties is None:
-                from openpyxl.worksheet.properties import WorksheetProperties
-                ws.sheet_properties = WorksheetProperties()
-        except Exception:
-            pass
-        if orientacao == "Paisagem":
-            ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
-        else:
-            ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
-        ws.page_setup.fitToPage = True
-        ws.page_setup.fitToWidth = 1
-        ws.page_setup.fitToHeight = 0
-        ws.page_margins = PageMargins(
-            left=0.5, right=0.5, top=0.75, bottom=0.75)
-
-    out = io.BytesIO()
-    wb.save(out)
-    out.seek(0)
-    return out.read()
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(io.BytesIO(excel_bytes))
+        for ws in wb.worksheets:
+            try:
+                if orientacao == "Paisagem":
+                    ws.page_setup.orientation = "landscape"
+                else:
+                    ws.page_setup.orientation = "portrait"
+                ws.page_setup.fitToPage = True
+                ws.page_setup.fitToWidth = 1
+                ws.page_setup.fitToHeight = 0
+                ws.page_setup.paperSize = 9  # A4
+            except Exception:
+                pass
+        out = io.BytesIO()
+        wb.save(out)
+        out.seek(0)
+        return out.read()
+    except Exception:
+        return excel_bytes  # retorna original se falhar
