@@ -3677,6 +3677,7 @@ def pagina_consulta_oes():
     })
 
     # Selecionar linha para ver detalhes
+    st.caption("💡 **Clique em uma linha** da tabela abaixo para ver os detalhes, gerar PDF/Excel, alterar ou excluir a OE.")
     evento = st.dataframe(
         df_exib,
         use_container_width=True,
@@ -3700,6 +3701,7 @@ def pagina_consulta_oes():
         num_of_sel = str(oe_row.get("num_of", oe_row.get("numero_of", "")))
 
         with st.expander(f"📋 Detalhes da OE {num_oe_sel} — OF {num_of_sel}", expanded=True):
+            st.caption("👆 Role para baixo para ver as opções de Alterar e Excluir.")
             d1, d2, d3, d4 = st.columns(4)
             d1.text_input("Nº OE", num_oe_sel, disabled=True)
             d2.text_input("OF", num_of_sel, disabled=True)
@@ -3792,46 +3794,46 @@ def pagina_consulta_oes():
             else:
                 st.caption("Configure o template Excel em ⚙️ Administração → Configurações → Templates")
 
-            # ── Alterar OE ────────────────────────────────────────────────
-            with st.expander("✏️ Alterar esta OE", expanded=False):
-                _edit_obs = st.text_area("Observações",
-                    value=obs_val, key="edit_obs_cons")
-                if st.button("💾 Salvar alterações", key="btn_salvar_oe_cons",
-                             type="primary"):
-                    try:
-                        from fundicao_db import engine as _eng_upd
-                        from sqlalchemy import text as _text_upd
-                        with _eng_upd.begin() as _conn_upd:
-                            _conn_upd.execute(_text_upd(
-                                "UPDATE ordem_entrega SET observacao=:obs WHERE numero_oe=:noe"
-                            ), {"obs": _edit_obs, "noe": num_oe_sel})
-                            _conn_upd.execute(_text_upd(
-                                "UPDATE oe_item SET observacoes=:obs WHERE numero_oe=:noe"
-                            ), {"obs": _edit_obs, "noe": num_oe_sel})
-                        st.success(f"✅ OE {num_oe_sel} atualizada!")
-                        st.rerun()
-                    except Exception as _e:
-                        st.error(f"Erro: {_e}")
+        # ── Alterar OE ────────────────────────────────────────────────────
+        with st.expander(f"✏️ Alterar OE {num_oe_sel}", expanded=False):
+            _edit_obs = st.text_area("Observações",
+                value=obs_val, key="edit_obs_cons")
+            if st.button("💾 Salvar alterações", key="btn_salvar_oe_cons",
+                         type="primary"):
+                try:
+                    from fundicao_db import engine as _eng_upd
+                    from sqlalchemy import text as _text_upd
+                    with _eng_upd.begin() as _conn_upd:
+                        _conn_upd.execute(_text_upd(
+                            "UPDATE ordem_entrega SET observacao=:obs WHERE numero_oe=:noe"
+                        ), {"obs": _edit_obs, "noe": num_oe_sel})
+                        _conn_upd.execute(_text_upd(
+                            "UPDATE oe_item SET observacoes=:obs WHERE numero_oe=:noe"
+                        ), {"obs": _edit_obs, "noe": num_oe_sel})
+                    st.success(f"✅ OE {num_oe_sel} atualizada!")
+                    st.rerun()
+                except Exception as _e:
+                    st.error(f"Erro: {_e}")
 
-            # ── Excluir OE ────────────────────────────────────────────────────
-            with st.expander("🗑️ Excluir esta OE", expanded=False):
-                st.warning(f"⚠️ Excluir a OE **{num_oe_sel}** removerá todos os seus itens. Esta ação não pode ser desfeita.")
-                if st.button("🗑️ Confirmar exclusão", key="btn_excluir_oe_cons",
-                             type="primary"):
-                    try:
-                        from fundicao_db import engine as _eng_del
-                        from sqlalchemy import text as _text_del
-                        with _eng_del.begin() as _conn_del:
-                            _conn_del.execute(_text_del(
-                                "DELETE FROM oe_item WHERE numero_oe=:noe"),
-                                {"noe": num_oe_sel})
-                            _conn_del.execute(_text_del(
-                                "DELETE FROM ordem_entrega WHERE numero_oe=:noe"),
-                                {"noe": num_oe_sel})
-                        st.success(f"✅ OE {num_oe_sel} excluída!")
-                        st.rerun()
-                    except Exception as _e:
-                        st.error(f"Erro: {_e}")
+        # ── Excluir OE ────────────────────────────────────────────────────────
+        with st.expander(f"🗑️ Excluir OE {num_oe_sel}", expanded=False):
+            st.warning(f"⚠️ Excluir a OE **{num_oe_sel}** removerá todos os seus itens. Esta ação não pode ser desfeita.")
+            if st.button("🗑️ Confirmar exclusão", key="btn_excluir_oe_cons",
+                         type="primary"):
+                try:
+                    from fundicao_db import engine as _eng_del
+                    from sqlalchemy import text as _text_del
+                    with _eng_del.begin() as _conn_del:
+                        _conn_del.execute(_text_del(
+                            "DELETE FROM oe_item WHERE numero_oe=:noe"),
+                            {"noe": num_oe_sel})
+                        _conn_del.execute(_text_del(
+                            "DELETE FROM ordem_entrega WHERE numero_oe=:noe"),
+                            {"noe": num_oe_sel})
+                    st.success(f"✅ OE {num_oe_sel} excluída!")
+                    st.rerun()
+                except Exception as _e:
+                    st.error(f"Erro: {_e}")
 
     # ── Exportar CSV ─────────────────────────────────────────────────────────
     st.divider()
