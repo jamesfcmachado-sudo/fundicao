@@ -17,8 +17,15 @@ def gerar_oe_excel(template_bytes, numero_oe, nome_cliente, itens,
         config = {}
 
     wb = load_workbook(io.BytesIO(template_bytes))
-    ws = wb["PADRAO"] if "PADRAO" in wb.sheetnames else (
-         wb["PADRÃO"] if "PADRÃO" in wb.sheetnames else wb.active)
+    # Busca aba padrao por nome (tenta variantes)
+    ws = None
+    for nome_aba in wb.sheetnames:
+        if nome_aba.upper().replace("Ã","A").replace("ã","a") in ["PADRAO","PADRÃO","PADRAO"]:
+            ws = wb[nome_aba]
+            break
+    if ws is None:
+        # Usa a ultima aba (geralmente o padrao)
+        ws = wb[wb.sheetnames[-1]]
 
     # ── Logo ──────────────────────────────────────────────────────────────────
     if logo_bytes:
@@ -323,6 +330,13 @@ def configurar_impressao_excel(excel_bytes, orientacao="Paisagem"):
 
     wb = load_workbook(io.BytesIO(excel_bytes))
     for ws in wb.worksheets:
+        try:
+            # Garante que sheet_properties existe
+            if ws.sheet_properties is None:
+                from openpyxl.worksheet.properties import WorksheetProperties
+                ws.sheet_properties = WorksheetProperties()
+        except Exception:
+            pass
         if orientacao == "Paisagem":
             ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
         else:
