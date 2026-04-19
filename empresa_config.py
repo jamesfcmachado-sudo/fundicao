@@ -39,6 +39,7 @@ def _garantir_defaults() -> None:
         "cnpj":                "",
         "endereco":            "",
         "bairro":              "",
+        "contato":             "",
         "cidade":              "Guarulhos",
         "estado":              "SP",
         "cep":                 "",
@@ -157,6 +158,8 @@ def tela_configuracoes_empresa() -> None:
                 value=get_config("endereco"))
             bairro = st.text_input("Bairro",
                 value=get_config("bairro"))
+            contato = st.text_input("Contato / Responsável",
+                value=get_config("contato"))
             cidade = st.text_input("Cidade",
                 value=get_config("cidade"))
             estado = st.text_input("Estado (UF)",
@@ -173,6 +176,7 @@ def tela_configuracoes_empresa() -> None:
             set_config("site", site)
             set_config("endereco", endereco)
             set_config("bairro", bairro)
+            set_config("contato", contato)
             set_config("cidade", cidade)
             set_config("estado", estado.upper())
             set_config("cep", cep)
@@ -310,6 +314,15 @@ def tela_configuracoes_empresa() -> None:
         st.caption("Faça upload dos templates Excel para geração automática de documentos.")
 
         st.markdown("##### Template — Ordem de Entrega (OE)")
+        _resp_oe = st.text_input(
+            "Responsável pela OE (aparece no campo Contato do documento)",
+            value=get_config("template_oe_responsavel", get_config("contato")),
+            key="resp_oe_input"
+        )
+        if st.button("💾 Salvar responsável OE", key="btn_resp_oe"):
+            set_config("template_oe_responsavel", _resp_oe)
+            st.success(f"✅ Responsável OE salvo: {_resp_oe}")
+
         _oe_tmpl = get_config("template_oe_base64", "")
         if _oe_tmpl:
             st.success(f"Template OE cadastrado: {get_config('template_oe_nome')}")
@@ -347,6 +360,15 @@ def tela_configuracoes_empresa() -> None:
         st.divider()
 
         st.markdown("##### Template — Certificado de Qualidade")
+        _resp_cert = st.text_input(
+            "Responsável pelo Certificado (aparece no documento)",
+            value=get_config("template_cert_responsavel", get_config("contato")),
+            key="resp_cert_input"
+        )
+        if st.button("💾 Salvar responsável Certificado", key="btn_resp_cert"):
+            set_config("template_cert_responsavel", _resp_cert)
+            st.success(f"✅ Responsável Certificado salvo: {_resp_cert}")
+
         _cert_tmpl = get_config("template_cert_base64", "")
         if _cert_tmpl:
             st.success(f"Template Certificado cadastrado: {get_config('template_cert_nome')}")

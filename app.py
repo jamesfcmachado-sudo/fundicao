@@ -3543,6 +3543,7 @@ def pagina_consulta_oes():
                             "estado":        get_config("estado"),
                             "telefone":      get_config("telefone"),
                             "email":         get_config("email"),
+                            "contato":       get_config("template_oe_responsavel") or get_config("contato"),
                             "rodape_pdf":    get_config("rodape_pdf"),
                             "orientacao":    get_config("template_oe_orientacao", "Paisagem"),
                         }

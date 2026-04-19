@@ -133,7 +133,7 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
 
     if logo_bytes:
         try:
-            logo_img = RLImage(io.BytesIO(logo_bytes), width=logo_w-4*mm, height=18*mm)
+            logo_img = RLImage(io.BytesIO(logo_bytes), width=logo_w-4*mm, height=24*mm)
             logo_cell = logo_img
         except Exception:
             logo_cell = Paragraph("", PS("lc"))
@@ -148,13 +148,16 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
                    PS("oe1", fontSize=12, fontName="Helvetica-Bold", alignment=TA_CENTER)),
          Paragraph(f"<b>Nº {numero_oe}/{ano}</b>",
                    PS("oe2", fontSize=12, fontName="Helvetica-Bold", alignment=TA_CENTER))],
-    ]], colWidths=[logo_w, titulo_w, oe_w])
+    ]], colWidths=[logo_w, titulo_w, oe_w], rowHeights=[28*mm])
 
     cab.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
         ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
         ("LINEBEFORE",   (2,0),(2,0),   0.8, BK),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",        (0,0),(0,0),   "CENTER"),
+        ("ALIGN",        (1,0),(1,0),   "CENTER"),
+        ("ALIGN",        (2,0),(2,0),   "CENTER"),
         ("LEFTPADDING",  (0,0),(-1,-1), 4),
         ("RIGHTPADDING", (0,0),(-1,-1), 4),
         ("TOPPADDING",   (0,0),(-1,-1), 4),
@@ -230,7 +233,7 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
         tp += peso*qtd; tq += qtd; tv += pt
 
         rows.append([
-            pc(it.get("num_pedido","") or ""),
+            pc(it.get("num_pedido","") or "", TA_CENTER),  # Nº pedido centralizado
             pc(it.get("num_of","") or "", TA_CENTER),
             pc(it.get("referencia","") or "", TA_CENTER),
             pc(it.get("liga","") or "", TA_CENTER),
@@ -238,11 +241,11 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
             pc(it.get("certificado","") or "", TA_CENTER),
             pc(it.get("cod_peca","") or ""),
             pc(it.get("descricao","") or "", TA_CENTER),
-            pc(fpeso(peso), TA_RIGHT),
+            pc(fpeso(peso), TA_CENTER),   # Peso centralizado
             pc(str(qtd), TA_CENTER),
             pc(it.get("serie","") or "", TA_CENTER),
-            pc(fbr(pu), TA_RIGHT),
-            pc(fbr(pt), TA_RIGHT),
+            pc(fbr(pu), TA_CENTER),       # Preco Un centralizado
+            pc(fbr(pt), TA_CENTER),       # Preco Total centralizado
         ])
 
     # Linhas vazias ate 14
@@ -254,10 +257,10 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
     rows.append([
         pc("<b>Total</b>", TA_LEFT),
         "","","","","","","",
-        pc(f"<b>{fpeso(tp)}</b>", TA_RIGHT),
+        pc(f"<b>{fpeso(tp)}</b>", TA_CENTER),
         pc(f"<b>{int(tq)}</b>", TA_CENTER),
         "","",
-        pc(f"<b>{fbr(tv)}</b>", TA_RIGHT),
+        pc(f"<b>{fbr(tv)}</b>", TA_CENTER),
     ])
 
     RH = [9*mm] + [5.5*mm]*(n-1) + [5.5*mm]
@@ -315,8 +318,14 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
 
     # Rodapé
     story.append(Spacer(1, 2*mm))
+    try:
+        from datetime import timezone, timedelta
+        _tz_br = timezone(timedelta(hours=-3))
+        _agora = datetime.now(_tz_br)
+    except Exception:
+        _agora = datetime.now()
     story.append(Paragraph(
-        datetime.now().strftime("%d/%m/%Y\n%H:%M\nPg. 1"),
+        _agora.strftime("%d/%m/%Y  %H:%M  Pg. 1"),
         PS("rd", fontSize=7, alignment=TA_RIGHT, textColor=colors.grey, leading=9)
     ))
 
