@@ -203,22 +203,24 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
     # Nº pedido | OF | Ref | Liga | Corr | Cert | Cod Peça | Descrição | Peso | Qtde | Série | Pr.Un | Pr.Total
     # ═══════════════════════════════════════════════
     CW = [
-        28*mm,   # Nº do pedido
-        16*mm,   # OF
-        22*mm,   # Referência
-        12*mm,   # Liga
+        26*mm,   # Nº do pedido
+        14*mm,   # OF
+        20*mm,   # Referência
+        11*mm,   # Liga
         13*mm,   # Corr.
-        18*mm,   # Certificado
-        38*mm,   # Codigo da Peça
-        32*mm,   # Descrição  ← aumentado
-        17*mm,   # Peso uni.(kg)
-        13*mm,   # Qtde(pçs)
-        18*mm,   # Série
-        22*mm,   # Preço Un.(R$)
-        None,    # Preço Total — ocupa o resto
+        17*mm,   # Certificado
+        36*mm,   # Codigo da Peça
+        30*mm,   # Descrição
+        16*mm,   # Peso uni.(kg)
+        12*mm,   # Qtde(pçs)
+        17*mm,   # Série
+        20*mm,   # Preço Un.(R$)
+        25*mm,   # Preço Total
     ]
-    fixo = sum(c for c in CW if c is not None)
-    CW[12] = max(W - fixo, 20*mm)
+    total_cw = sum(CW)
+    if total_cw > W:
+        fator = W / total_cw
+        CW = [c * fator for c in CW]
 
     def ph(t): return Paragraph(t, PS("hd", fontSize=7.5, fontName="Helvetica-Bold",
                                        alignment=TA_CENTER, leading=9, wordWrap='CJK'))
