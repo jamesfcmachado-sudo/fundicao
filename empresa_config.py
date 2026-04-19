@@ -308,132 +308,146 @@ def tela_configuracoes_empresa() -> None:
             st.info("⚠️ O novo formato de numeração será aplicado nos próximos lançamentos.")
 
 
+    # fix_templates_v2
     # ── ABA 5: Templates ──────────────────────────────────────────────────────
     with tab5:
-        st.subheader("Templates de documentos")
-        st.caption("Faça upload dos templates Excel para geração automática de documentos.")
+        st.subheader("📋 Templates de documentos")
+        st.caption("Configure os templates Excel para geração automática de documentos.")
 
-        st.markdown("##### Template — Ordem de Entrega (OE)")
-        _resp_oe = st.text_input(
-            "Responsável pela OE (aparece no campo Contato do documento)",
-            value=get_config("template_oe_responsavel", get_config("contato")),
-            key="resp_oe_input"
-        )
-        if st.button("💾 Salvar responsável OE", key="btn_resp_oe"):
-            set_config("template_oe_responsavel", _resp_oe)
-            st.success(f"✅ Responsável OE salvo: {_resp_oe}")
+        # ── TEMPLATE OE ──────────────────────────────────────────────────────
+        with st.container(border=True):
+            st.markdown("#### 📦 Ordem de Entrega (OE)")
 
-        _oe_tmpl = get_config("template_oe_base64", "")
-        if _oe_tmpl:
-            st.success(f"Template OE cadastrado: {get_config('template_oe_nome')}")
-            if st.button("🗑️ Remover template OE", key="btn_rm_tmpl_oe"):
-                set_config("template_oe_base64", "")
-                set_config("template_oe_nome", "")
-                st.rerun()
-        else:
-            st.info("Nenhum template de OE cadastrado.")
+            _c1, _c2 = st.columns([3,1])
+            with _c1:
+                _resp_oe = st.text_input(
+                    "👤 Responsável pela OE",
+                    value=get_config("template_oe_responsavel", get_config("contato")),
+                    placeholder="Nome que aparecerá no campo Contato do documento",
+                    key="resp_oe_input"
+                )
+            with _c2:
+                st.write("")
+                st.write("")
+                if st.button("💾 Salvar", key="btn_resp_oe"):
+                    set_config("template_oe_responsavel", _resp_oe)
+                    st.success("✅ Salvo!")
 
-        _orient_oe = st.radio(
-            "Orientação da página",
-            options=["Retrato", "Paisagem"],
-            index=0 if get_config("template_oe_orientacao", "Paisagem") == "Retrato" else 1,
-            horizontal=True,
-            key="orient_oe"
-        )
-        if st.button("💾 Salvar orientação OE", key="btn_orient_oe"):
-            set_config("template_oe_orientacao", _orient_oe)
-            st.success(f"✅ Orientação OE salva: {_orient_oe}")
+            st.divider()
 
-        _up_oe = st.file_uploader(
-            "Carregar template de OE (.xlsx)",
-            type=["xlsx"],
-            key="upload_tmpl_oe"
-        )
-        if _up_oe:
-            import base64
-            _b64 = base64.b64encode(_up_oe.read()).decode()
-            set_config("template_oe_base64", _b64)
-            set_config("template_oe_nome", _up_oe.name)
-            st.success(f"✅ Template OE salvo: {_up_oe.name}")
-            st.rerun()
+            _orient_oe = st.radio(
+                "📐 Orientação de impressão",
+                options=["Paisagem", "Retrato"],
+                index=0 if get_config("template_oe_orientacao", "Paisagem") == "Paisagem" else 1,
+                horizontal=True,
+                key="orient_oe_radio"
+            )
+            if st.button("💾 Salvar orientação OE", key="btn_save_orient_oe"):
+                set_config("template_oe_orientacao", _orient_oe)
+                st.success(f"✅ Orientação OE: {_orient_oe}")
 
-        st.divider()
+            st.divider()
 
-        st.markdown("##### Template — Certificado de Qualidade")
-        _resp_cert = st.text_input(
-            "Responsável pelo Certificado (aparece no documento)",
-            value=get_config("template_cert_responsavel", get_config("contato")),
-            key="resp_cert_input"
-        )
-        if st.button("💾 Salvar responsável Certificado", key="btn_resp_cert"):
-            set_config("template_cert_responsavel", _resp_cert)
-            st.success(f"✅ Responsável Certificado salvo: {_resp_cert}")
-
-        _cert_tmpl = get_config("template_cert_base64", "")
-        if _cert_tmpl:
-            st.success(f"Template Certificado cadastrado: {get_config('template_cert_nome')}")
-            if st.button("🗑️ Remover template Certificado", key="btn_rm_tmpl_cert"):
-                set_config("template_cert_base64", "")
-                set_config("template_cert_nome", "")
-                st.rerun()
-        else:
-            st.info("Nenhum template de Certificado cadastrado.")
-
-        _orient_cert = st.radio(
-            "Orientação da página",
-            options=["Retrato", "Paisagem"],
-            index=0 if get_config("template_cert_orientacao", "Retrato") == "Retrato" else 1,
-            horizontal=True,
-            key="orient_cert"
-        )
-        if st.button("💾 Salvar orientação Certificado", key="btn_orient_cert"):
-            set_config("template_cert_orientacao", _orient_cert)
-            st.success(f"✅ Orientação Certificado salva: {_orient_cert}")
-
-        _up_cert = st.file_uploader(
-            "Carregar template de Certificado (.xlsx)",
-            type=["xlsx"],
-            key="upload_tmpl_cert"
-        )
-        if _up_cert:
-            import base64
-            _b64 = base64.b64encode(_up_cert.read()).decode()
-            set_config("template_cert_base64", _b64)
-            set_config("template_cert_nome", _up_cert.name)
-            st.success(f"✅ Template Certificado salvo: {_up_cert.name}")
-            st.rerun()
-
-    # ── ABA 4: Relatórios e PDFs ──────────────────────────────────────────────
-    with tab4:
-        st.subheader("Textos em relatórios e PDFs")
-
-        rodape_rel = st.text_input(
-            "Rodapé dos relatórios",
-            value=get_config("rodape_relatorio"),
-            help="Aparece no rodapé das tabelas e relatórios impressos."
-        )
-        rodape_pdf = st.text_area(
-            "Rodapé dos PDFs (OE, Certificados)",
-            value=get_config("rodape_pdf"),
-            height=80,
-            help="Aparece no rodapé dos PDFs gerados pelo sistema."
-        )
-
-        st.divider()
-        st.subheader("Prévia do cabeçalho dos PDFs")
-        logo_bytes = get_logo_ativo_bytes()
-        prev_c1, prev_c2 = st.columns([1, 3])
-        with prev_c1:
-            if logo_bytes:
-                st.image(logo_bytes, width=120)
+            _oe_tmpl_b64 = get_config("template_oe_base64", "")
+            _oe_tmpl_nome = get_config("template_oe_nome", "")
+            if _oe_tmpl_b64:
+                st.success(f"✅ Template atual: **{_oe_tmpl_nome}**")
+                _dl1, _dl2 = st.columns(2)
+                with _dl1:
+                    import base64 as _b64mod
+                    st.download_button(
+                        "⬇️ Baixar template OE atual",
+                        data=_b64mod.b64decode(_oe_tmpl_b64),
+                        file_name=_oe_tmpl_nome,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="dl_tmpl_oe"
+                    )
+                with _dl2:
+                    if st.button("🗑️ Remover template OE", key="btn_rm_tmpl_oe"):
+                        set_config("template_oe_base64", "")
+                        set_config("template_oe_nome", "")
+                        st.rerun()
             else:
-                st.info("Sem logo")
-        with prev_c2:
-            st.markdown(f"**{get_config('nome_empresa')}**")
-            st.caption(f"{get_config('endereco')} — {get_config('cidade')}/{get_config('estado')}")
-            st.caption(f"Tel: {get_config('telefone')} | {get_config('email')}")
+                st.info("Nenhum template de OE cadastrado.")
 
-        if st.button("💾 Salvar configurações de PDF", type="primary", key="btn_salvar_pdf"):
-            set_config("rodape_relatorio", rodape_rel)
-            set_config("rodape_pdf", rodape_pdf)
-            st.success("✅ Configurações de PDF salvas!")
+            _up_oe = st.file_uploader(
+                "📤 Carregar novo template de OE (.xlsx)",
+                type=["xlsx"],
+                key="upload_tmpl_oe"
+            )
+            if _up_oe:
+                import base64
+                _b64 = base64.b64encode(_up_oe.read()).decode()
+                set_config("template_oe_base64", _b64)
+                set_config("template_oe_nome", _up_oe.name)
+                st.success(f"✅ Template OE salvo: {_up_oe.name}")
+                st.rerun()
+
+        # ── TEMPLATE CERTIFICADO ─────────────────────────────────────────────
+        with st.container(border=True):
+            st.markdown("#### 🏅 Certificado de Qualidade")
+
+            _c3, _c4 = st.columns([3,1])
+            with _c3:
+                _resp_cert = st.text_input(
+                    "👤 Responsável pelo Certificado",
+                    value=get_config("template_cert_responsavel", get_config("contato")),
+                    placeholder="Nome que aparecerá no documento",
+                    key="resp_cert_input"
+                )
+            with _c4:
+                st.write("")
+                st.write("")
+                if st.button("💾 Salvar", key="btn_resp_cert"):
+                    set_config("template_cert_responsavel", _resp_cert)
+                    st.success("✅ Salvo!")
+
+            st.divider()
+
+            _orient_cert = st.radio(
+                "📐 Orientação de impressão",
+                options=["Retrato", "Paisagem"],
+                index=0 if get_config("template_cert_orientacao", "Retrato") == "Retrato" else 1,
+                horizontal=True,
+                key="orient_cert_radio"
+            )
+            if st.button("💾 Salvar orientação Certificado", key="btn_save_orient_cert"):
+                set_config("template_cert_orientacao", _orient_cert)
+                st.success(f"✅ Orientação Certificado: {_orient_cert}")
+
+            st.divider()
+
+            _cert_tmpl_b64 = get_config("template_cert_base64", "")
+            _cert_tmpl_nome = get_config("template_cert_nome", "")
+            if _cert_tmpl_b64:
+                st.success(f"✅ Template atual: **{_cert_tmpl_nome}**")
+                _dl3, _dl4 = st.columns(2)
+                with _dl3:
+                    import base64 as _b64mod2
+                    st.download_button(
+                        "⬇️ Baixar template Certificado atual",
+                        data=_b64mod2.b64decode(_cert_tmpl_b64),
+                        file_name=_cert_tmpl_nome,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="dl_tmpl_cert"
+                    )
+                with _dl4:
+                    if st.button("🗑️ Remover template Certificado", key="btn_rm_tmpl_cert"):
+                        set_config("template_cert_base64", "")
+                        set_config("template_cert_nome", "")
+                        st.rerun()
+            else:
+                st.info("Nenhum template de Certificado cadastrado.")
+
+            _up_cert = st.file_uploader(
+                "📤 Carregar novo template de Certificado (.xlsx)",
+                type=["xlsx"],
+                key="upload_tmpl_cert"
+            )
+            if _up_cert:
+                import base64
+                _b64 = base64.b64encode(_up_cert.read()).decode()
+                set_config("template_cert_base64", _b64)
+                set_config("template_cert_nome", _up_cert.name)
+                st.success(f"✅ Template Certificado salvo: {_up_cert.name}")
+                st.rerun()
