@@ -3542,6 +3542,14 @@ def pagina_consulta_oes():
                             "telefone":     get_config("telefone"),
                             "email":        get_config("email"),
                         }
+                        # Busca logo ativo
+                        _logo_bytes = None
+                        try:
+                            from empresa_config import get_logo_ativo_bytes
+                            _logo_bytes = get_logo_ativo_bytes()
+                        except Exception:
+                            pass
+
                         _tmpl_bytes = _b64mod.b64decode(_tmpl_b64)
                         _excel_bytes = gerar_oe_excel(
                             template_bytes=_tmpl_bytes,
@@ -3550,6 +3558,7 @@ def pagina_consulta_oes():
                             itens=_itens_lista,
                             observacoes=_obs_oe,
                             config=_cfg,
+                            logo_bytes=_logo_bytes,
                         )
                         from gerar_oe_excel import gerar_oe_pdf
                         _pdf_bytes = gerar_oe_pdf(
@@ -3558,6 +3567,7 @@ def pagina_consulta_oes():
                             itens=_itens_lista,
                             observacoes=_obs_oe,
                             config=_cfg,
+                            logo_bytes=_logo_bytes,
                         )
                         st.download_button(
                             f"⬇️ Baixar OE {_noe} em PDF",

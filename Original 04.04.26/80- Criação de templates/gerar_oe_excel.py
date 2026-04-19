@@ -1,59 +1,117 @@
 """
-gerar_oe_excel.py - Preenche template Excel e gera PDF da OE
+gerar_oe_excel.py
+Preenche template Excel de OE com dados do banco.
+Calcula valores no Python (sem depender do Excel recalcular).
 """
 from __future__ import annotations
 import io
 from datetime import datetime
 
 
-def gerar_oe_excel(template_bytes, numero_oe, nome_cliente, itens, observacoes="", config=None):
+def gerar_oe_excel(template_bytes, numero_oe, nome_cliente, itens,
+                   observacoes="", config=None, logo_bytes=None):
+    """Preenche template Excel e retorna bytes .xlsx com valores calculados."""
     from openpyxl import load_workbook
+
     if config is None:
         config = {}
+
     wb = load_workbook(io.BytesIO(template_bytes))
-    ws = wb["PADRÃO"] if "PADRÃO" in wb.sheetnames else wb.active
+    ws = wb["PADRAO"] if "PADRAO" in wb.sheetnames else (
+         wb["PADRÃO"] if "PADRÃO" in wb.sheetnames else wb.active)
 
+    # ── Logo ──────────────────────────────────────────────────────────────────
+    if logo_bytes:
+        try:
+            from openpyxl.drawing.image import Image as XLImage
+            from PIL import Image as PILImage
+            # Redimensiona logo para caber no cabecalho
+            pil_img = PILImage.open(io.BytesIO(logo_bytes))
+            pil_img.thumbnail((120, 80))
+            img_buf = io.BytesIO()
+            pil_img.save(img_buf, format="PNG")
+            img_buf.seek(0)
+            xl_img = XLImage(img_buf)
+            xl_img.anchor = "B2"
+            # Remove logo antigo se existir
+            ws._images = []
+            ws.add_image(xl_img)
+        except Exception:
+            pass
+    else:
+        # Mantem logo original do template
+        pass
+
+    # ── Dados empresa ─────────────────────────────────────────────────────────
     ws["C7"]  = config.get("nome_empresa", "Metalpoli - Fundição de Precisão")
-    ws["C9"]  = config.get("endereco", "")
-    ws["M11"] = config.get("cidade", "")
-    ws["M13"] = config.get("estado", "")
-    ws["E15"] = config.get("telefone", "")
-    ws["M15"] = config.get("email", "")
-    ws["M5"]  = f"Nº {numero_oe}"
-    ws["P5"]  = f"/{datetime.now().strftime('%y')}"
-    ws["C17"] = nome_cliente
+    ws["C9"]  = config.get("endereco", "Rua Umbuzeirro Nº 74")
+    ws["C11"] = config.get("bairro", "Cidade Satélite")
+    ws["M11"] = config.get("cidade", "Guarulhos")
+    ws["C13"] = config.get("contato", "James Machado")
+    ws["M13"] = config.get("estado", "SP")
+    ws["E15"] = config.get("telefone", "(11) 2954-9908")
+    ws["M15"] = config.get("email", "comercial@metalpoli.com.br")
 
-    for i in range(14):
-        ln = 21 + i
+    # ── Numero OE — M5 e P5 juntos ────────────────────────────────────────────
+    ano = datetime.now().strftime("%y")
+    ws["M5"] = f"Nº {numero_oe}/{ano}"
+    ws["P5"] = None  # limpa o campo separado
+
+    # ── Cliente ───────────────────────────────────────────────────────────────
+    ws["C17"] = nome_cliente.upper()
+
+    # ── Itens: calcula valores no Python e insere como valores (nao formulas) ─
+    LINHA_INICIO = 21
+    MAX_ITENS = 14
+
+    total_peso  = 0.0
+    total_qtd   = 0
+    total_valor = 0.0
+
+    for i in range(MAX_ITENS):
+        ln = LINHA_INICIO + i
         if i < len(itens):
             it = itens[i]
-            ws[f"B{ln}"] = str(it.get("num_pedido","") or "")
-            ws[f"C{ln}"] = str(it.get("num_of","") or "")
-            ws[f"E{ln}"] = str(it.get("referencia","") or "")
-            ws[f"F{ln}"] = str(it.get("liga","") or "")
-            ws[f"G{ln}"] = str(it.get("corrida","") or "")
-            ws[f"H{ln}"] = str(it.get("certificado","") or "")
-            ws[f"I{ln}"] = str(it.get("cod_peca","") or "")
-            ws[f"K{ln}"] = str(it.get("descricao","") or "")
-            try: ws[f"M{ln}"] = float(it.get("peso_unit",0) or 0)
-            except: ws[f"M{ln}"] = 0
-            try: ws[f"N{ln}"] = int(it.get("qtd",0) or 0)
-            except: ws[f"N{ln}"] = 0
-            ws[f"O{ln}"] = str(it.get("serie","") or "")
-            try: ws[f"P{ln}"] = float(it.get("preco_unit",0) or 0)
-            except: ws[f"P{ln}"] = 0
-            ws[f"Q{ln}"] = f"=P{ln}*N{ln}"
+            peso  = float(it.get("peso_unit", 0) or 0)
+            qtd   = int(it.get("qtd", 0) or 0)
+            pu    = float(it.get("preco_unit", 0) or 0)
+            pt    = float(it.get("preco_total", 0) or qtd * pu)
+
+            ws[f"B{ln}"] = str(it.get("num_pedido", "") or "")
+            ws[f"C{ln}"] = str(it.get("num_of", "") or "")
+            ws[f"E{ln}"] = str(it.get("referencia", "") or "")
+            ws[f"F{ln}"] = str(it.get("liga", "") or "")
+            ws[f"G{ln}"] = str(it.get("corrida", "") or "")
+            ws[f"H{ln}"] = str(it.get("certificado", "") or "")
+            ws[f"I{ln}"] = str(it.get("cod_peca", "") or "")
+            ws[f"K{ln}"] = str(it.get("descricao", "") or "")
+            ws[f"M{ln}"] = peso
+            ws[f"N{ln}"] = qtd
+            ws[f"O{ln}"] = str(it.get("serie", "") or "")
+            ws[f"P{ln}"] = pu
+            ws[f"Q{ln}"] = pt  # valor calculado (nao formula)
+
+            total_peso  += peso * qtd
+            total_qtd   += qtd
+            total_valor += pt
         else:
             for col in ["B","C","E","F","G","H","I","K","O"]:
                 ws[f"{col}{ln}"] = None
-            ws[f"M{ln}"] = None; ws[f"N{ln}"] = None
-            ws[f"P{ln}"] = None; ws[f"Q{ln}"] = f"=P{ln}*N{ln}"
+            ws[f"M{ln}"] = None
+            ws[f"N{ln}"] = None
+            ws[f"P{ln}"] = None
+            ws[f"Q{ln}"] = None
 
-    ws["M35"] = "=((M21*N21)+(M22*N22)+(M23*N23)+(M24*N24)+(M25*N25)+(M26*N26)+(M27*N27)+(M28*N28)+(M29*N29)+(M30*N30)+(M31*N31)+(M32*N32)+(M33*N33)+(M34*N34))"
-    ws["N35"] = "=SUM(N21:N34)"
-    ws["Q35"] = "=SUM(Q21:Q34)"
+    # Totais calculados diretamente
+    ws["M35"] = total_peso
+    ws["N35"] = total_qtd
+    ws["Q35"] = total_valor
+
+    # ── Observacoes ───────────────────────────────────────────────────────────
     if observacoes:
         ws["B37"] = f" - {observacoes.upper()}"
+    else:
+        ws["B37"] = None
 
     out = io.BytesIO()
     wb.save(out)
@@ -61,11 +119,13 @@ def gerar_oe_excel(template_bytes, numero_oe, nome_cliente, itens, observacoes="
     return out.read()
 
 
-def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="", config=None):
+def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="", config=None, logo_bytes=None):
+    """Gera PDF da OE usando reportlab."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+    from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+        Paragraph, Spacer, HRFlowable, Image as RLImage)
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
@@ -75,71 +135,114 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="", config=None):
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
         leftMargin=15*mm, rightMargin=15*mm,
-        topMargin=12*mm, bottomMargin=12*mm)
+        topMargin=10*mm, bottomMargin=10*mm)
 
     styles = getSampleStyleSheet()
     def P(name, **kw):
         return ParagraphStyle(name, parent=styles["Normal"], **kw)
 
-    s_titulo = P("t", fontSize=14, alignment=TA_CENTER, fontName="Helvetica-Bold", spaceAfter=2)
-    s_sub    = P("s", fontSize=8,  alignment=TA_CENTER, textColor=colors.grey, spaceAfter=2)
-    s_oe     = P("oe", fontSize=13, alignment=TA_CENTER, fontName="Helvetica-Bold",
-                  textColor=colors.HexColor("#1a3a5c"), spaceAfter=3)
-    s_label  = P("lb", fontSize=7, textColor=colors.grey)
-    s_val    = P("vl", fontSize=9, fontName="Helvetica-Bold")
-    s_head   = P("hd", fontSize=7, textColor=colors.white, fontName="Helvetica-Bold", alignment=TA_CENTER)
-    s_cell   = P("cl", fontSize=7, alignment=TA_LEFT,   leading=9)
-    s_cellc  = P("cc", fontSize=7, alignment=TA_CENTER, leading=9)
-    s_cellr  = P("cr", fontSize=7, alignment=TA_RIGHT,  leading=9)
-    s_obs    = P("ob", fontSize=8)
-    s_rod    = P("rd", fontSize=7, alignment=TA_CENTER, textColor=colors.grey)
+    s_emp   = P("emp", fontSize=13, fontName="Helvetica-Bold",
+                alignment=TA_LEFT, spaceAfter=1)
+    s_sub   = P("sub", fontSize=8, textColor=colors.grey, spaceAfter=1)
+    s_oe    = P("oe",  fontSize=16, fontName="Helvetica-Bold",
+                alignment=TA_CENTER, textColor=colors.HexColor("#1a3a5c"))
+    s_oen   = P("oen", fontSize=12, fontName="Helvetica-Bold",
+                alignment=TA_CENTER, spaceAfter=3)
+    s_label = P("lb",  fontSize=7,  textColor=colors.grey)
+    s_val   = P("vl",  fontSize=9,  fontName="Helvetica-Bold")
+    s_head  = P("hd",  fontSize=7,  textColor=colors.white,
+                fontName="Helvetica-Bold", alignment=TA_CENTER)
+    s_cell  = P("cl",  fontSize=7,  alignment=TA_LEFT,   leading=9)
+    s_cellc = P("cc",  fontSize=7,  alignment=TA_CENTER, leading=9)
+    s_cellr = P("cr",  fontSize=7,  alignment=TA_RIGHT,  leading=9)
+    s_obs   = P("ob",  fontSize=8)
+    s_rod   = P("rd",  fontSize=7,  alignment=TA_CENTER,
+                textColor=colors.grey)
 
-    nome_empresa = config.get("nome_empresa","Metalpoli - Fundição de Precisão")
-    endereco = config.get("endereco","")
-    cidade   = config.get("cidade","")
-    estado   = config.get("estado","")
-    telefone = config.get("telefone","")
-    email    = config.get("email","")
+    nome_empresa = config.get("nome_empresa", "Metalpoli - Fundição de Precisão")
+    endereco = config.get("endereco", "")
+    cidade   = config.get("cidade", "")
+    estado   = config.get("estado", "")
+    telefone = config.get("telefone", "")
+    email    = config.get("email", "")
+    ano      = datetime.now().strftime("%y")
 
     def fmt_br(v):
         return f"R$ {v:,.2f}".replace(",","X").replace(".",",").replace("X",".")
 
     story = []
-    story.append(Paragraph(nome_empresa, s_titulo))
-    story.append(Paragraph(f"{endereco} — {cidade}/{estado} | Tel: {telefone} | {email}", s_sub))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#1a3a5c")))
-    story.append(Spacer(1, 3*mm))
-    story.append(Paragraph("ORDEM DE ENTREGA", s_oe))
-    story.append(Paragraph(
-        f"<b>Nº {numero_oe}</b> &nbsp;&nbsp;&nbsp; Emissão: {datetime.now().strftime('%d/%m/%Y')}",
-        P("oe2", fontSize=10, alignment=TA_CENTER)))
+
+    # ── Cabecalho com logo ────────────────────────────────────────────────────
+    if logo_bytes:
+        try:
+            logo_buf = io.BytesIO(logo_bytes)
+            logo_img = RLImage(logo_buf, width=35*mm, height=22*mm)
+            cab_data = [[
+                logo_img,
+                [Paragraph(nome_empresa, s_emp),
+                 Paragraph(f"{endereco} — {cidade}/{estado}", s_sub),
+                 Paragraph(f"Tel: {telefone} | {email}", s_sub)],
+                [Paragraph("ORDEM DE ENTREGA", s_oe),
+                 Paragraph(f"Nº {numero_oe}/{ano}", s_oen)],
+            ]]
+            cab_tbl = Table(cab_data, colWidths=[38*mm, 80*mm, 62*mm])
+        except Exception:
+            logo_bytes = None
+
+    if not logo_bytes:
+        cab_data = [[
+            [Paragraph(nome_empresa, s_emp),
+             Paragraph(f"{endereco} — {cidade}/{estado}", s_sub),
+             Paragraph(f"Tel: {telefone} | {email}", s_sub)],
+            [Paragraph("ORDEM DE ENTREGA", s_oe),
+             Paragraph(f"Nº {numero_oe}/{ano}", s_oen)],
+        ]]
+        cab_tbl = Table(cab_data, colWidths=[100*mm, 80*mm])
+
+    cab_tbl.setStyle(TableStyle([
+        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ("LEFTPADDING", (0,0), (-1,-1), 3),
+        ("LINEBELOW", (0,0), (-1,0), 1, colors.HexColor("#1a3a5c")),
+    ]))
+    story.append(cab_tbl)
     story.append(Spacer(1, 3*mm))
 
-    dados = Table([[
-        Paragraph("<b>Fornecedor:</b>", s_label), Paragraph(nome_empresa, s_val),
-        Paragraph("<b>Cliente:</b>", s_label),    Paragraph(nome_cliente, s_val),
-    ]], colWidths=[22*mm, 80*mm, 20*mm, 58*mm])
-    dados.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),2)]))
-    story.append(dados)
-    story.append(Spacer(1, 3*mm))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#cccccc")))
+    # ── Dados fornecedor / cliente ────────────────────────────────────────────
+    info_data = [[
+        Paragraph("<b>Fornecedor:</b>", s_label),
+        Paragraph(nome_empresa, s_val),
+        Paragraph("<b>Cliente:</b>", s_label),
+        Paragraph(nome_cliente.upper(), s_val),
+    ]]
+    info_tbl = Table(info_data, colWidths=[22*mm, 78*mm, 18*mm, 62*mm])
+    info_tbl.setStyle(TableStyle([
+        ("VALIGN", (0,0), (-1,-1), "TOP"),
+        ("LEFTPADDING", (0,0), (-1,-1), 2),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 3),
+        ("LINEBELOW", (0,0), (-1,0), 0.5, colors.HexColor("#cccccc")),
+    ]))
+    story.append(info_tbl)
     story.append(Spacer(1, 2*mm))
 
-    CW = [22*mm,14*mm,20*mm,10*mm,13*mm,18*mm,28*mm,18*mm,12*mm,10*mm,14*mm,14*mm,15*mm]
+    # ── Tabela de itens ───────────────────────────────────────────────────────
+    CW = [22*mm,13*mm,19*mm,9*mm,12*mm,17*mm,25*mm,17*mm,
+          11*mm,10*mm,13*mm,13*mm,14*mm]
     HEADS = ["Nº Pedido","OF","Referência","Liga","Corrida","Certificado",
-             "Código Peça","Descrição","Peso\n(kg)","Qtde\n(pçs)","Série","Preço\nUnit.","Preço\nTotal"]
+             "Código Peça","Descrição","Peso\n(kg)","Qtde\n(pçs)",
+             "Série","Preço\nUnit.(R$)","Preço\nTotal(R$)"]
 
     rows = [[Paragraph(h, s_head) for h in HEADS]]
-    total_peso = total_qtd = total_valor = 0
+    total_peso = total_qtd = total_valor = 0.0
 
     for it in itens:
-        peso  = float(it.get("peso_unit",0) or 0)
-        qtd   = int(it.get("qtd",0) or 0)
-        pu    = float(it.get("preco_unit",0) or 0)
-        pt    = float(it.get("preco_total",0) or qtd*pu)
-        total_peso  += peso*qtd
+        peso  = float(it.get("peso_unit", 0) or 0)
+        qtd   = int(it.get("qtd", 0) or 0)
+        pu    = float(it.get("preco_unit", 0) or 0)
+        pt    = float(it.get("preco_total", 0) or qtd*pu)
+        total_peso  += peso * qtd
         total_qtd   += qtd
         total_valor += pt
+
         rows.append([
             Paragraph(str(it.get("num_pedido","") or ""), s_cell),
             Paragraph(str(it.get("num_of","") or ""), s_cellc),
@@ -162,8 +265,9 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="", config=None):
     rows.append([
         Paragraph("<b>TOTAL</b>", s_totb),"","","","","","","",
         Paragraph(f"<b>{total_peso:.2f}</b>", s_totr),
-        Paragraph(f"<b>{total_qtd}</b>", s_totb),
-        "", "",
+        Paragraph(f"<b>{int(total_qtd)}</b>", s_totb),
+        "",
+        "",
         Paragraph(f"<b>{fmt_br(total_valor)}</b>", s_totr),
     ])
 
@@ -189,6 +293,7 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="", config=None):
         story.append(Paragraph(f"<b>Observações:</b> {observacoes}", s_obs))
         story.append(Spacer(1,4*mm))
 
+    # ── Assinaturas ───────────────────────────────────────────────────────────
     ass = Table([[
         Paragraph("_"*35, s_cellc),
         Paragraph("_"*35, s_cellc),
@@ -196,12 +301,14 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="", config=None):
         Paragraph("Carregado por:", s_cellc),
         Paragraph("Recebido por:", s_cellc),
     ]], colWidths=[90*mm, 90*mm])
-    ass.setStyle(TableStyle([("ALIGN",(0,0),(-1,-1),"CENTER"),("TOPPADDING",(0,0),(-1,-1),2)]))
+    ass.setStyle(TableStyle([("ALIGN",(0,0),(-1,-1),"CENTER"),
+                              ("TOPPADDING",(0,0),(-1,-1),2)]))
     story.append(ass)
-    story.append(Spacer(1,4*mm))
+    story.append(Spacer(1,3*mm))
 
     rodape = config.get("rodape_pdf", f"{nome_empresa} | {telefone} | {email}")
-    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#cccccc")))
+    story.append(HRFlowable(width="100%", thickness=0.5,
+                             color=colors.HexColor("#cccccc")))
     story.append(Paragraph(rodape, s_rod))
 
     doc.build(story)
