@@ -1,6 +1,5 @@
 """
-gerar_oe_excel.py
-Gera PDF fiel ao template da OE da Metalpoli.
+gerar_oe_excel.py - Gera PDF fiel ao template Excel da OE Metalpoli
 """
 from __future__ import annotations
 import io
@@ -16,10 +15,8 @@ def gerar_oe_excel(template_bytes, numero_oe, nome_cliente, itens,
     wb = load_workbook(io.BytesIO(template_bytes))
     ws = None
     for nome_aba in wb.sheetnames:
-        n = nome_aba.upper()
-        if 'PADR' in n:
-            ws = wb[nome_aba]
-            break
+        if 'PADR' in nome_aba.upper():
+            ws = wb[nome_aba]; break
     if ws is None:
         ws = wb[wb.sheetnames[-1]]
 
@@ -32,8 +29,8 @@ def gerar_oe_excel(template_bytes, numero_oe, nome_cliente, itens,
     ws["E15"] = config.get("telefone", "(11) 2954-9908")
     ws["M15"] = config.get("email", "comercial@metalpoli.com.br")
     ano = datetime.now().strftime("%y")
-    ws["M5"] = f"Nº {numero_oe}/{ano}"
-    ws["P5"] = None
+    ws["M5"] = f"Nº {numero_oe}"
+    ws["P5"] = f"/{ano}"
     ws["C17"] = nome_cliente.upper()
 
     total_peso = total_qtd = total_valor = 0.0
@@ -58,9 +55,7 @@ def gerar_oe_excel(template_bytes, numero_oe, nome_cliente, itens,
             ws[f"O{ln}"] = str(it.get("serie","") or "")
             ws[f"P{ln}"] = pu
             ws[f"Q{ln}"] = pt
-            total_peso  += peso * qtd
-            total_qtd   += qtd
-            total_valor += pt
+            total_peso += peso * qtd; total_qtd += qtd; total_valor += pt
         else:
             for col in ["B","C","E","F","G","H","I","K","O"]:
                 ws[f"{col}{ln}"] = None
@@ -70,38 +65,33 @@ def gerar_oe_excel(template_bytes, numero_oe, nome_cliente, itens,
     ws["M35"] = total_peso
     ws["N35"] = int(total_qtd)
     ws["Q35"] = total_valor
-    if observacoes:
-        ws["B37"] = f" - {observacoes.upper()}"
-    else:
-        ws["B37"] = None
+    ws["B37"] = f" - {observacoes.upper()}" if observacoes else None
 
     out = io.BytesIO()
-    wb.save(out)
-    out.seek(0)
+    wb.save(out); out.seek(0)
     return out.read()
 
 
 def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
                  config=None, logo_bytes=None):
-    """Gera PDF fiel ao layout do template Excel da OE."""
+    """Gera PDF paisagem fiel ao template Excel da OE."""
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib import colors
     from reportlab.lib.units import mm
     from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
-        Paragraph, Spacer, HRFlowable, Image as RLImage)
+        Paragraph, Spacer, Image as RLImage)
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
-    from reportlab.pdfbase import pdfmetrics
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
     if config is None:
         config = {}
 
-    orientacao = config.get("orientacao", "Paisagem")
-    pagesize = landscape(A4) if orientacao == "Paisagem" else A4
+    # Paisagem A4
+    pagesize = landscape(A4)
     PW, PH = pagesize
     ML = MR = 10*mm
     MT = MB = 8*mm
-    W = PW - ML - MR
+    W = PW - ML - MR  # ~257mm
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=pagesize,
@@ -109,48 +99,13 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
         topMargin=MT, bottomMargin=MB)
 
     styles = getSampleStyleSheet()
-    def P(name, **kw):
+    def PS(name, **kw):
         return ParagraphStyle(name, parent=styles["Normal"], **kw)
 
-    # Cores do template
-    AZUL    = colors.HexColor("#1F3864")
-    BORDA   = colors.HexColor("#000000")
-    CINZA_H = colors.HexColor("#D9D9D9")
+    BK = colors.black
+    GR = colors.HexColor("#D9D9D9")
 
-    # Estilos
-    s_tit_empresa = P("te", fontSize=18, fontName="Helvetica-Bold",
-                       alignment=TA_CENTER)
-    s_oe_titulo   = P("ot", fontSize=12, fontName="Helvetica-Bold",
-                       alignment=TA_CENTER)
-    s_oe_num      = P("on", fontSize=12, fontName="Helvetica-Bold",
-                       alignment=TA_LEFT)
-    s_label       = P("lb", fontSize=9,  fontName="Helvetica-Bold",
-                       alignment=TA_LEFT)
-    s_val         = P("vl", fontSize=9,  fontName="Helvetica",
-                       alignment=TA_LEFT)
-    s_val_b       = P("vb", fontSize=9,  fontName="Helvetica-Bold",
-                       alignment=TA_LEFT)
-    s_head        = P("hd", fontSize=8,  fontName="Helvetica-Bold",
-                       alignment=TA_CENTER, leading=9)
-    s_cell        = P("cl", fontSize=8,  fontName="Helvetica",
-                       alignment=TA_LEFT, leading=9)
-    s_cellc       = P("cc", fontSize=8,  fontName="Helvetica",
-                       alignment=TA_CENTER, leading=9)
-    s_cellr       = P("cr", fontSize=8,  fontName="Helvetica",
-                       alignment=TA_RIGHT, leading=9)
-    s_total_l     = P("tl", fontSize=8,  fontName="Helvetica-Bold",
-                       alignment=TA_LEFT)
-    s_total_r     = P("tr", fontSize=8,  fontName="Helvetica-Bold",
-                       alignment=TA_RIGHT)
-    s_obs_tit     = P("ob", fontSize=9,  fontName="Helvetica-Bold",
-                       alignment=TA_CENTER)
-    s_obs_val     = P("ov", fontSize=9,  fontName="Helvetica",
-                       alignment=TA_LEFT)
-    s_ass         = P("as", fontSize=9,  fontName="Helvetica",
-                       alignment=TA_CENTER)
-    s_footer      = P("ft", fontSize=7,  fontName="Helvetica",
-                       alignment=TA_RIGHT, textColor=colors.grey)
-
+    # Dados da empresa
     nome_empresa = config.get("nome_empresa", "Metalpoli Fundição de Precisão")
     endereco = config.get("endereco", "Rua Umbuzeirro Nº 74")
     bairro   = config.get("bairro", "Cidade Satélite")
@@ -161,257 +116,234 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
     contato  = config.get("contato", "James Machado")
     ano      = datetime.now().strftime("%y")
 
-    def fmt_br(v):
+    def fbr(v):
         return f"R$ {v:,.2f}".replace(",","X").replace(".",",").replace("X",".")
-    def fmt_peso(v):
+    def fpeso(v):
         return f"{v:.3f}".replace(".",",")
-
-    st = TableStyle
-    TS = lambda *args: TableStyle(list(args))
 
     story = []
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    # BLOCO 1: CABECALHO (Logo + Titulo empresa + Ordem de Entrega + Numero)
-    # ═══════════════════════════════════════════════════════════════════════════
-    logo_w = 45*mm
+    # ═══════════════════════════════════════════════════════
+    # CABECALHO: Logo | Fundição de Precisão | Ordem de Entrega Nº
+    # Proporcoes do Excel: B-H=logo, I-K=titulo, L-Q=OE numero
+    # ═══════════════════════════════════════════════════════
+    logo_w  = 55*mm   # colunas B-H
+    titulo_w = 110*mm  # colunas I-K (maior)
+    oe_w    = W - logo_w - titulo_w  # colunas L-Q
+
     if logo_bytes:
         try:
-            logo_img = RLImage(io.BytesIO(logo_bytes), width=logo_w, height=20*mm)
+            logo_img = RLImage(io.BytesIO(logo_bytes), width=logo_w-4*mm, height=18*mm)
             logo_cell = logo_img
         except Exception:
-            logo_cell = Paragraph("", s_val)
-            logo_w = 5*mm
+            logo_cell = Paragraph("", PS("lc"))
     else:
-        logo_cell = Paragraph("", s_val)
-        logo_w = 5*mm
-
-    titulo_w  = W * 0.42
-    oe_w      = W - logo_w - titulo_w
+        logo_cell = Paragraph("", PS("lc2"))
 
     cab = Table([[
         logo_cell,
-        Paragraph(nome_empresa.replace("Metalpoli ", "Metalpoli\n").replace(" Fundição", "\nFundição") if False else nome_empresa.split("Fundição de Precisão")[0] + "\n<b>Fundição de Precisão</b>" if "Fundição de Precisão" in nome_empresa else nome_empresa, 
-                  P("te2", fontSize=18, fontName="Helvetica-Bold", alignment=TA_CENTER, leading=20)),
-        [Paragraph("Ordem de Entrega", s_oe_titulo),
-         Paragraph(f"Nº {numero_oe}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/{ano}", 
-                   P("onum", fontSize=12, fontName="Helvetica-Bold", 
-                     alignment=TA_CENTER))],
+        Paragraph(f"<b>Fundição de Precisão</b>",
+                  PS("ft", fontSize=22, fontName="Helvetica-Bold",
+                     alignment=TA_CENTER)),
+        [Paragraph("<b>Ordem de Entrega</b>",
+                   PS("oe1", fontSize=14, fontName="Helvetica-Bold",
+                      alignment=TA_CENTER)),
+         Paragraph(f"<b>Nº {numero_oe}&nbsp;&nbsp;&nbsp;&nbsp;/{ano}</b>",
+                   PS("oe2", fontSize=14, fontName="Helvetica-Bold",
+                      alignment=TA_CENTER))],
     ]], colWidths=[logo_w, titulo_w, oe_w])
 
     cab.setStyle(TableStyle([
-        ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
-        ("ALIGN",       (1,0),(1,0),   "CENTER"),
-        ("LEFTPADDING", (0,0),(-1,-1), 3),
-        ("RIGHTPADDING",(0,0),(-1,-1), 3),
-        ("BOX",         (0,0),(-1,-1), 0.8, BORDA),
-        ("LINEBEFORE",  (1,0),(1,0),   0.8, BORDA),
-        ("LINEBEFORE",  (2,0),(2,0),   0.8, BORDA),
-        ("TOPPADDING",  (0,0),(-1,-1), 4),
+        ("BOX",          (0,0),(-1,-1), 0.8, BK),
+        ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
+        ("LINEBEFORE",   (2,0),(2,0),   0.8, BK),
+        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",        (1,0),(1,0),   "CENTER"),
+        ("LEFTPADDING",  (0,0),(-1,-1), 4),
+        ("RIGHTPADDING", (0,0),(-1,-1), 4),
+        ("TOPPADDING",   (0,0),(-1,-1), 4),
         ("BOTTOMPADDING",(0,0),(-1,-1), 4),
     ]))
     story.append(cab)
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    # BLOCO 2: DADOS DO FORNECEDOR
-    # ═══════════════════════════════════════════════════════════════════════════
-    lw = 22*mm  # largura labels
-    vw = W - lw*2 - 30*mm  # largura valores principais
-    cw = 15*mm  # largura cidades labels
-    cv = W - lw - vw - cw  # largura valores cidade
+    # ═══════════════════════════════════════════════════════
+    # DADOS DO FORNECEDOR - fiel ao Excel
+    # Colunas: Label(B) | Valor(C-K) | Label2(L) | Valor2(M-Q)
+    # ═══════════════════════════════════════════════════════
+    lw  = 22*mm   # largura label esquerdo (col B)
+    lw2 = 18*mm   # largura label direito (col L)
+    vw2 = W - lw - lw2 - 2*mm  # valor direito (col M-Q)
+    vw  = W - lw - lw2 - vw2   # valor esquerdo (col C-K)
+
+    # Ajuste fino baseado nas proporcoes do Excel
+    lw  = 22*mm
+    vw  = W * 0.52
+    lw2 = 16*mm
+    vw2 = W - lw - vw - lw2
+
+    def lbl(t): return Paragraph(f"<b>{t}</b>", PS("lb", fontSize=10, fontName="Helvetica-Bold"))
+    def val(t): return Paragraph(str(t), PS("vl", fontSize=10, fontName="Helvetica"))
+    def valb(t): return Paragraph(f"<b>{str(t)}</b>", PS("vb", fontSize=10, fontName="Helvetica-Bold"))
 
     dados = [
-        # Linha Fornecedor
-        [Paragraph("<b>Fornecedor</b>", s_label),
-         Paragraph(nome_empresa, s_val), "", "", "", ""],
-        # Linha Endereço
-        [Paragraph("<b>Endereço</b>", s_label),
-         Paragraph(endereco, s_val), "", "", "", ""],
-        # Linha Bairro / Cidade
-        [Paragraph("<b>Bairro</b>", s_label),
-         Paragraph(bairro, s_val), "",
-         Paragraph("<b>Cidade</b>", s_label),
-         Paragraph(cidade, s_val), ""],
-        # Linha Contato / UF
-        [Paragraph("<b>Contato</b>", s_label),
-         Paragraph(contato, s_val), "",
-         Paragraph("<b>UF</b>", s_label),
-         Paragraph(estado, s_val), ""],
-        # Linha Tel / email
-        [Paragraph("<b>Tel.</b>", s_label),
-         Paragraph(telefone, s_val), "",
-         Paragraph("<b>e-mail</b>", s_label),
-         Paragraph(email, s_val), ""],
-        # Linha Cliente
-        [Paragraph("<b>Cliente</b>", s_label),
-         Paragraph(f"<b>{nome_cliente.upper()}</b>", s_val_b), "", "", "", ""],
+        [lbl("Fornecedor"), val(nome_empresa),        "",    ""],
+        [lbl("Endereço"),   val(endereco),             "",    ""],
+        [lbl("Bairro"),     val(bairro),   lbl("Cidade"), val(cidade)],
+        [lbl("Contato"),    val(contato),  lbl("UF"),     val(estado)],
+        [lbl("Tel."),       val(telefone), lbl("e-mail"), val(email)],
+        [lbl("Cliente"),    valb(nome_cliente.upper()), "", ""],
     ]
 
-    col_w_dados = [lw, W*0.38, W*0.06, cw, W*0.2, W*0.08]
-
-    tbl_dados = Table(dados, colWidths=col_w_dados)
-    tbl_dados.setStyle(TableStyle([
-        ("BOX",          (0,0),(-1,-1), 0.8, BORDA),
-        ("LINEBELOW",    (0,0),(-1,-2), 0.3, BORDA),
-        ("LINEBEFORE",   (3,2),(3,4),   0.5, BORDA),
-        ("SPAN",         (1,0),(5,0)),
-        ("SPAN",         (1,1),(5,1)),
-        ("SPAN",         (1,2),(2,2)),
-        ("SPAN",         (1,3),(2,3)),
-        ("SPAN",         (1,4),(2,4)),
-        ("SPAN",         (4,2),(5,2)),
-        ("SPAN",         (4,3),(5,3)),
-        ("SPAN",         (4,4),(5,4)),
-        ("SPAN",         (1,5),(5,5)),
+    tbl_d = Table(dados, colWidths=[lw, vw, lw2, vw2])
+    tbl_d.setStyle(TableStyle([
+        ("BOX",          (0,0),(-1,-1), 0.8, BK),
+        ("LINEBELOW",    (0,0),(-1,-2), 0.4, BK),
+        ("LINEBEFORE",   (2,2),(2,4),   0.4, BK),
+        ("SPAN",         (1,0),(3,0)),
+        ("SPAN",         (1,1),(3,1)),
+        ("SPAN",         (1,5),(3,5)),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
         ("LEFTPADDING",  (0,0),(-1,-1), 4),
         ("RIGHTPADDING", (0,0),(-1,-1), 4),
         ("TOPPADDING",   (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-        ("BACKGROUND",   (0,0),(0,-1),  colors.white),
     ]))
-    story.append(tbl_dados)
+    story.append(tbl_d)
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    # BLOCO 3: TABELA DE ITENS
-    # ═══════════════════════════════════════════════════════════════════════════
-    # Proporcoes baseadas no PDF original
+    # ═══════════════════════════════════════════════════════
+    # TABELA DE ITENS - proporcoes do Excel
+    # B=29.1, C+D=20.3, E=29.1, F=18.1, G=15, H=21.7, I+J=49.4, K+L=41.4, M=20, N=14.4, O=22.6, P=32.2, Q=28.8
+    # ═══════════════════════════════════════════════════════
     CW = [
-        W*0.113,  # Nº Pedido
-        W*0.065,  # OF
-        W*0.085,  # Referência
-        W*0.048,  # Liga
-        W*0.058,  # Corr.
-        W*0.073,  # Certificado
-        W*0.115,  # Codigo da Peça
-        W*0.085,  # Descrição
-        W*0.060,  # Peso uni.(kg)
-        W*0.048,  # Qtde(pçs)
-        W*0.065,  # Série
-        W*0.083,  # Preço Un.(R$)
-        W*0.092,  # Preço Total(R$)
+        29*mm,   # Nº do pedido (B)
+        20*mm,   # OF (C+D)
+        29*mm,   # Referência (E)
+        18*mm,   # Liga (F)
+        15*mm,   # Corr. (G)
+        22*mm,   # Certificado (H)
+        49*mm,   # Codigo da Peça (I+J)
+        None,    # Descrição (K+L) — calculado
+        20*mm,   # Peso uni.(kg) (M)
+        14*mm,   # Qtde(pçs) (N)
+        23*mm,   # Série (O)
+        32*mm,   # Preço Un.(R$) (P)
+        None,    # Preço Total(R$) (Q) — calculado
     ]
+    # Calcula colunas restantes
+    fixo = sum(c for c in CW if c is not None)
+    livre = W - fixo
+    CW[7]  = livre * 0.55  # Descrição
+    CW[12] = livre * 0.45  # Preço Total
 
-    HEADS = [
-        "Nº do pedido", "OF", "Referência", "Liga", "Corr.",
-        "Certificado", "Codigo da Peça", "Descrição",
-        "Peso uni.\n(kg)", "Qtde\n(pçs)", "Série",
-        "Preço Un.\n(R$)", "Preço Total\n(R$)"
-    ]
+    def ph(t): return Paragraph(t, PS("hd", fontSize=8, fontName="Helvetica-Bold",
+                                       alignment=TA_CENTER, leading=9))
+    def pc(t): return Paragraph(str(t), PS("cl", fontSize=8, alignment=TA_LEFT, leading=9))
+    def pcc(t): return Paragraph(str(t), PS("cc", fontSize=8, alignment=TA_CENTER, leading=9))
+    def pcr(t): return Paragraph(str(t), PS("cr", fontSize=8, alignment=TA_RIGHT, leading=9))
 
-    rows = [[Paragraph(h, s_head) for h in HEADS]]
-    total_peso = total_qtd = total_valor = 0.0
+    HEADS = ["Nº do pedido","OF","Referência","Liga","Corr.","Certificado",
+             "Codigo da Peça","Descrição","Peso uni.\n(kg)","Qtde\n(pçs)",
+             "Série","Preço Un.\n(R$)","Preço Total\n(R$)"]
+
+    rows = [[ph(h) for h in HEADS]]
+    tp = tq = tv = 0.0
 
     for it in itens:
-        peso = float(it.get("peso_unit", 0) or 0)
-        qtd  = int(it.get("qtd", 0) or 0)
-        pu   = float(it.get("preco_unit", 0) or 0)
-        pt   = float(it.get("preco_total", 0) or qtd * pu)
-        total_peso  += peso * qtd
-        total_qtd   += qtd
-        total_valor += pt
+        peso = float(it.get("peso_unit",0) or 0)
+        qtd  = int(it.get("qtd",0) or 0)
+        pu   = float(it.get("preco_unit",0) or 0)
+        pt   = float(it.get("preco_total",0) or qtd*pu)
+        tp += peso*qtd; tq += qtd; tv += pt
 
         rows.append([
-            Paragraph(str(it.get("num_pedido","") or ""), s_cell),
-            Paragraph(str(it.get("num_of","") or ""), s_cellc),
-            Paragraph(str(it.get("referencia","") or ""), s_cellc),
-            Paragraph(str(it.get("liga","") or ""), s_cellc),
-            Paragraph(str(it.get("corrida","") or ""), s_cellc),
-            Paragraph(str(it.get("certificado","") or ""), s_cellc),
-            Paragraph(str(it.get("cod_peca","") or ""), s_cell),
-            Paragraph(str(it.get("descricao","") or ""), s_cellc),
-            Paragraph(fmt_peso(peso), s_cellr),
-            Paragraph(str(qtd), s_cellc),
-            Paragraph(str(it.get("serie","") or ""), s_cellc),
-            Paragraph(fmt_br(pu), s_cellr),
-            Paragraph(fmt_br(pt), s_cellr),
+            pc(it.get("num_pedido","") or ""),
+            pcc(it.get("num_of","") or ""),
+            pcc(it.get("referencia","") or ""),
+            pcc(it.get("liga","") or ""),
+            pcc(it.get("corrida","") or ""),
+            pcc(it.get("certificado","") or ""),
+            pc(it.get("cod_peca","") or ""),
+            pcc(it.get("descricao","") or ""),
+            pcr(fpeso(peso)),
+            pcc(str(qtd)),
+            pcc(it.get("serie","") or ""),
+            pcr(fbr(pu)),
+            pcr(fbr(pt)),
         ])
 
-    # Linhas vazias ate completar 14
-    n_vazias = max(0, 14 - len(itens))
-    for _ in range(n_vazias):
-        rows.append([""] * 13)
+    # Linhas vazias ate 14
+    for _ in range(max(0, 14-len(itens))):
+        rows.append([""]*13)
 
     # Linha total
     n = len(rows)
     rows.append([
-        Paragraph("<b>Total</b>", s_total_l),
-        "","","","","","",
-        "",
-        Paragraph(f"<b>{fmt_peso(total_peso)}</b>", s_total_r),
-        Paragraph(f"<b>{int(total_qtd)}</b>", 
-                  P("trc", fontSize=8, fontName="Helvetica-Bold", alignment=TA_CENTER)),
+        Paragraph("<b>Total</b>", PS("tl", fontSize=8, fontName="Helvetica-Bold")),
+        "","","","","","","",
+        Paragraph(f"<b>{fpeso(tp)}</b>", PS("tr", fontSize=8, fontName="Helvetica-Bold", alignment=TA_RIGHT)),
+        Paragraph(f"<b>{int(tq)}</b>",   PS("tc", fontSize=8, fontName="Helvetica-Bold", alignment=TA_CENTER)),
         "",
         "",
-        Paragraph(f"<b>{fmt_br(total_valor)}</b>", s_total_r),
+        Paragraph(f"<b>{fbr(tv)}</b>",   PS("tv", fontSize=8, fontName="Helvetica-Bold", alignment=TA_RIGHT)),
     ])
 
-    tbl_itens = Table(rows, colWidths=CW, repeatRows=1,
-                      rowHeights=[8*mm] + [6*mm]*(len(rows)-2) + [6*mm])
-    tbl_itens.setStyle(TableStyle([
-        # Cabecalho
-        ("BACKGROUND",    (0,0),(-1,0),    CINZA_H),
-        ("FONTNAME",      (0,0),(-1,0),    "Helvetica-Bold"),
-        ("FONTSIZE",      (0,0),(-1,0),    8),
-        ("ALIGN",         (0,0),(-1,0),    "CENTER"),
-        ("VALIGN",        (0,0),(-1,-1),   "MIDDLE"),
-        # Grade
-        ("GRID",          (0,0),(-1,-1),   0.5, BORDA),
-        # Total
-        ("BACKGROUND",    (0,n),(-1,n),    colors.white),
-        ("FONTNAME",      (0,n),(-1,n),    "Helvetica-Bold"),
-        # Padding
-        ("LEFTPADDING",   (0,0),(-1,-1),   2),
-        ("RIGHTPADDING",  (0,0),(-1,-1),   2),
-        ("TOPPADDING",    (0,0),(-1,-1),   1),
-        ("BOTTOMPADDING", (0,0),(-1,-1),   1),
+    RH = [8*mm] + [6*mm]*(n-1) + [6*mm]
+    tbl_i = Table(rows, colWidths=CW, rowHeights=RH, repeatRows=1)
+    tbl_i.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,0),   GR),
+        ("FONTNAME",      (0,0),(-1,0),   "Helvetica-Bold"),
+        ("ALIGN",         (0,0),(-1,0),   "CENTER"),
+        ("VALIGN",        (0,0),(-1,-1),  "MIDDLE"),
+        ("GRID",          (0,0),(-1,-1),  0.5, BK),
+        ("LEFTPADDING",   (0,0),(-1,-1),  2),
+        ("RIGHTPADDING",  (0,0),(-1,-1),  2),
+        ("TOPPADDING",    (0,0),(-1,-1),  1),
+        ("BOTTOMPADDING", (0,0),(-1,-1),  1),
     ]))
-    story.append(tbl_itens)
+    story.append(tbl_i)
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    # BLOCO 4: OBSERVACOES
-    # ═══════════════════════════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════
+    # OBSERVACOES
+    # ═══════════════════════════════════════════════════════
     obs_rows = [
-        [Paragraph("<b>Observações</b>", s_obs_tit)],
-        [Paragraph(f" - {observacoes.upper()}" if observacoes else "", s_obs_val)],
+        [Paragraph("<b>Observações</b>", PS("ot", fontSize=9, fontName="Helvetica-Bold", alignment=TA_CENTER))],
+        [Paragraph(f" - {observacoes.upper()}" if observacoes else "", PS("ov", fontSize=9))],
     ]
     tbl_obs = Table(obs_rows, colWidths=[W])
     tbl_obs.setStyle(TableStyle([
-        ("BOX",          (0,0),(-1,-1), 0.5, BORDA),
-        ("LINEBELOW",    (0,0),(0,0),   0.3, BORDA),
+        ("BOX",          (0,0),(-1,-1), 0.5, BK),
+        ("LINEBELOW",    (0,0),(0,0),   0.3, BK),
         ("LEFTPADDING",  (0,0),(-1,-1), 5),
         ("TOPPADDING",   (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-        ("ALIGN",        (0,0),(0,0),   "CENTER"),
     ]))
     story.append(tbl_obs)
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    # BLOCO 5: ASSINATURAS
-    # ═══════════════════════════════════════════════════════════════════════════
-    story.append(Spacer(1, 5*mm))
-    ass_rows = [[
-        Paragraph("_" * 45, s_ass),
-        Paragraph("_" * 45, s_ass),
+    # ═══════════════════════════════════════════════════════
+    # ASSINATURAS
+    # ═══════════════════════════════════════════════════════
+    story.append(Spacer(1, 8*mm))
+    tbl_ass = Table([[
+        Paragraph("_"*45, PS("al", fontSize=9, alignment=TA_CENTER)),
+        Paragraph("_"*45, PS("ar", fontSize=9, alignment=TA_CENTER)),
     ],[
-        Paragraph("Carregado por:", s_ass),
-        Paragraph("Coletado por:", s_ass),
-    ]]
-    tbl_ass = Table(ass_rows, colWidths=[W/2, W/2])
+        Paragraph("Carregado por:", PS("cl2", fontSize=9, alignment=TA_CENTER)),
+        Paragraph("Coletado por:",  PS("cr2", fontSize=9, alignment=TA_CENTER)),
+    ]], colWidths=[W/2, W/2])
     tbl_ass.setStyle(TableStyle([
-        ("ALIGN",        (0,0),(-1,-1), "CENTER"),
-        ("TOPPADDING",   (0,0),(-1,-1), 2),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+        ("ALIGN",       (0,0),(-1,-1), "CENTER"),
+        ("TOPPADDING",  (0,0),(-1,-1), 1),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 1),
     ]))
     story.append(tbl_ass)
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    # RODAPE com data e pagina
-    # ═══════════════════════════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════
+    # RODAPE - data/hora/pagina no canto inferior direito
+    # ═══════════════════════════════════════════════════════
     story.append(Spacer(1, 2*mm))
     story.append(Paragraph(
         datetime.now().strftime("%d/%m/%Y\n%H:%M\nPg. 1"),
-        P("rd", fontSize=7, alignment=TA_RIGHT, textColor=colors.grey, leading=9)
+        PS("rd", fontSize=7, alignment=TA_RIGHT, textColor=colors.grey, leading=9)
     ))
 
     doc.build(story)
@@ -419,24 +351,21 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
     return buf.read()
 
 
-def excel_para_pdf(excel_bytes: bytes) -> bytes | None:
-    """Converte Excel para PDF usando LibreOffice."""
+def excel_para_pdf(excel_bytes):
     import subprocess, tempfile, os
     try:
         with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as f:
-            f.write(excel_bytes)
-            xlsx_path = f.name
+            f.write(excel_bytes); xlsx_path = f.name
         out_dir = tempfile.mkdtemp()
         subprocess.run(['libreoffice','--headless','--convert-to','pdf',
                         '--outdir', out_dir, xlsx_path],
                        capture_output=True, timeout=30)
-        pdf_name = os.path.splitext(os.path.basename(xlsx_path))[0] + '.pdf'
-        pdf_path = os.path.join(out_dir, pdf_name)
+        pdf_path = os.path.join(out_dir,
+            os.path.splitext(os.path.basename(xlsx_path))[0]+'.pdf')
         if os.path.exists(pdf_path):
-            with open(pdf_path, 'rb') as f:
-                pdf_bytes = f.read()
+            pdf = open(pdf_path,'rb').read()
             os.unlink(xlsx_path); os.unlink(pdf_path); os.rmdir(out_dir)
-            return pdf_bytes
+            return pdf
         os.unlink(xlsx_path)
         return None
     except Exception:
@@ -444,23 +373,19 @@ def excel_para_pdf(excel_bytes: bytes) -> bytes | None:
 
 
 def configurar_impressao_excel(excel_bytes, orientacao="Paisagem"):
-    """Configura orientacao de impressao no Excel."""
     try:
         from openpyxl import load_workbook
         wb = load_workbook(io.BytesIO(excel_bytes))
         for ws in wb.worksheets:
             try:
-                ws.page_setup.orientation = (
-                    "landscape" if orientacao == "Paisagem" else "portrait")
+                ws.page_setup.orientation = "landscape" if orientacao=="Paisagem" else "portrait"
                 ws.page_setup.fitToPage = True
                 ws.page_setup.fitToWidth = 1
                 ws.page_setup.fitToHeight = 0
                 ws.page_setup.paperSize = 9
             except Exception:
                 pass
-        out = io.BytesIO()
-        wb.save(out)
-        out.seek(0)
+        out = io.BytesIO(); wb.save(out); out.seek(0)
         return out.read()
     except Exception:
         return excel_bytes

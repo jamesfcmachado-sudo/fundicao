@@ -3586,14 +3586,24 @@ def pagina_consulta_oes():
                             config=_cfg,
                             logo_bytes=_logo_bytes,
                         )
-                        st.download_button(
-                            f"⬇️ Baixar OE {_noe} em PDF",
-                            data=_pdf_bytes,
-                            file_name=f"OE_{_noe}.pdf",
-                            mime="application/pdf",
-                            key=f"dl_pdf_{_noe}",
-                            type="primary",
-                        )
+                        _dc1, _dc2 = st.columns(2)
+                        with _dc1:
+                            st.download_button(
+                                f"⬇️ Baixar OE {_noe} em PDF",
+                                data=_pdf_bytes,
+                                file_name=f"OE_{_noe}.pdf",
+                                mime="application/pdf",
+                                key=f"dl_pdf_{_noe}",
+                                type="primary",
+                            )
+                        with _dc2:
+                            st.download_button(
+                                f"📊 Baixar OE {_noe} em Excel",
+                                data=_excel_bytes,
+                                file_name=f"OE_{_noe}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                key=f"dl_xlsx_{_noe}",
+                            )
                         st.success(f"OE {_noe} gerada com {len(_itens_lista)} item(ns)!")
                     except Exception as _ex:
                         st.error(f"Erro ao gerar OE: {_ex}")
