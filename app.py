@@ -3576,26 +3576,23 @@ def pagina_consulta_oes():
                         )
                         _excel_bytes = configurar_impressao_excel(
                             _excel_bytes, _orientacao)
-                        from gerar_oe_excel import excel_para_pdf
-                        _pdf_bytes = excel_para_pdf(_excel_bytes)
-                        if _pdf_bytes:
-                            st.download_button(
-                                f"⬇️ Baixar OE {_noe} em PDF",
-                                data=_pdf_bytes,
-                                file_name=f"OE_{_noe}.pdf",
-                                mime="application/pdf",
-                                key=f"dl_pdf_{_noe}",
-                                type="primary",
-                            )
-                        else:
-                            st.warning("Nao foi possivel gerar PDF. Baixe o Excel e converta manualmente.")
-                            st.download_button(
-                                f"⬇️ Baixar OE {_noe} em Excel",
-                                data=_excel_bytes,
-                                file_name=f"OE_{_noe}.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                key=f"dl_oe_{_noe}",
-                            )
+                        from gerar_oe_excel import gerar_oe_pdf
+                        _pdf_bytes = gerar_oe_pdf(
+                            numero_oe=str(_noe),
+                            nome_cliente=_cliente_oe,
+                            itens=_itens_lista,
+                            observacoes=_obs_oe,
+                            config=_cfg,
+                            logo_bytes=_logo_bytes,
+                        )
+                        st.download_button(
+                            f"⬇️ Baixar OE {_noe} em PDF",
+                            data=_pdf_bytes,
+                            file_name=f"OE_{_noe}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_pdf_{_noe}",
+                            type="primary",
+                        )
                         st.success(f"OE {_noe} gerada com {len(_itens_lista)} item(ns)!")
                     except Exception as _ex:
                         st.error(f"Erro ao gerar OE: {_ex}")
