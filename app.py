@@ -3535,12 +3535,15 @@ def pagina_consulta_oes():
                             _itens_lista = [dict(r._mapping) for r in _itens_oe]
 
                         _cfg = {
-                            "nome_empresa": get_config("nome_empresa"),
-                            "endereco":     get_config("endereco"),
-                            "cidade":       get_config("cidade"),
-                            "estado":       get_config("estado"),
-                            "telefone":     get_config("telefone"),
-                            "email":        get_config("email"),
+                            "nome_empresa":  get_config("nome_empresa"),
+                            "endereco":      get_config("endereco"),
+                            "bairro":        "",
+                            "cidade":        get_config("cidade"),
+                            "estado":        get_config("estado"),
+                            "telefone":      get_config("telefone"),
+                            "email":         get_config("email"),
+                            "rodape_pdf":    get_config("rodape_pdf"),
+                            "orientacao":    get_config("template_oe_orientacao", "Paisagem"),
                         }
                         # Busca logo ativo
                         _logo_bytes = None
@@ -3550,6 +3553,8 @@ def pagina_consulta_oes():
                         except Exception:
                             pass
 
+                        from gerar_oe_excel import configurar_impressao_excel
+                        _orientacao = _cfg.get("orientacao", "Paisagem")
                         _tmpl_bytes = _b64mod.b64decode(_tmpl_b64)
                         _excel_bytes = gerar_oe_excel(
                             template_bytes=_tmpl_bytes,
@@ -3569,21 +3574,17 @@ def pagina_consulta_oes():
                             config=_cfg,
                             logo_bytes=_logo_bytes,
                         )
+                        _excel_bytes = configurar_impressao_excel(
+                            _excel_bytes, _orientacao)
+                        orient = _cfg.get("orientacao", "Paisagem")
                         st.download_button(
-                            f"⬇️ Baixar OE {_noe} em PDF",
-                            data=_pdf_bytes,
-                            file_name=f"OE_{_noe}.pdf",
-                            mime="application/pdf",
-                            key=f"dl_oe_{_noe}",
-                        )
-                        # Tambem oferece Excel com formulas
-                        st.download_button(
-                            f"📊 Baixar OE {_noe} em Excel (com fórmulas)",
+                            f"⬇️ Baixar OE {_noe} (.xlsx) — {orient}",
                             data=_excel_bytes,
                             file_name=f"OE_{_noe}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            key=f"dl_xlsx_{_noe}",
+                            key=f"dl_oe_{_noe}",
                         )
+                        st.caption(f"💡 Abra o arquivo e use **Arquivo → Imprimir → Salvar como PDF** para gerar o PDF em {orient}.")
                         st.success(f"OE {_noe} gerada com {len(_itens_lista)} item(ns)!")
                     except Exception as _ex:
                         st.error(f"Erro ao gerar OE: {_ex}")

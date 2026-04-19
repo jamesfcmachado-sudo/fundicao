@@ -316,6 +316,17 @@ def tela_configuracoes_empresa() -> None:
         else:
             st.info("Nenhum template de OE cadastrado.")
 
+        _orient_oe = st.radio(
+            "Orientação da página",
+            options=["Retrato", "Paisagem"],
+            index=0 if get_config("template_oe_orientacao", "Paisagem") == "Retrato" else 1,
+            horizontal=True,
+            key="orient_oe"
+        )
+        if st.button("💾 Salvar orientação OE", key="btn_orient_oe"):
+            set_config("template_oe_orientacao", _orient_oe)
+            st.success(f"✅ Orientação OE salva: {_orient_oe}")
+
         _up_oe = st.file_uploader(
             "Carregar template de OE (.xlsx)",
             type=["xlsx"],
@@ -341,6 +352,17 @@ def tela_configuracoes_empresa() -> None:
                 st.rerun()
         else:
             st.info("Nenhum template de Certificado cadastrado.")
+
+        _orient_cert = st.radio(
+            "Orientação da página",
+            options=["Retrato", "Paisagem"],
+            index=0 if get_config("template_cert_orientacao", "Retrato") == "Retrato" else 1,
+            horizontal=True,
+            key="orient_cert"
+        )
+        if st.button("💾 Salvar orientação Certificado", key="btn_orient_cert"):
+            set_config("template_cert_orientacao", _orient_cert)
+            st.success(f"✅ Orientação Certificado salva: {_orient_cert}")
 
         _up_cert = st.file_uploader(
             "Carregar template de Certificado (.xlsx)",
