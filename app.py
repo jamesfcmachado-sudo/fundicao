@@ -3538,7 +3538,7 @@ def pagina_consulta_oes():
                         _cfg = {
                             "nome_empresa":  get_config("nome_empresa"),
                             "endereco":      get_config("endereco"),
-                            "bairro":        "",
+                            "bairro":        get_config("bairro"),
                             "cidade":        get_config("cidade"),
                             "estado":        get_config("estado"),
                             "telefone":      get_config("telefone"),

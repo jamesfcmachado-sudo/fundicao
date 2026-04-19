@@ -38,6 +38,7 @@ def _garantir_defaults() -> None:
         "nome_empresa":        "Metalpoli Fundição de Precisão",
         "cnpj":                "",
         "endereco":            "",
+        "bairro":              "",
         "cidade":              "Guarulhos",
         "estado":              "SP",
         "cep":                 "",
@@ -154,6 +155,8 @@ def tela_configuracoes_empresa() -> None:
         with c2:
             endereco = st.text_input("Endereço",
                 value=get_config("endereco"))
+            bairro = st.text_input("Bairro",
+                value=get_config("bairro"))
             cidade = st.text_input("Cidade",
                 value=get_config("cidade"))
             estado = st.text_input("Estado (UF)",
@@ -169,6 +172,7 @@ def tela_configuracoes_empresa() -> None:
             set_config("email", email)
             set_config("site", site)
             set_config("endereco", endereco)
+            set_config("bairro", bairro)
             set_config("cidade", cidade)
             set_config("estado", estado.upper())
             set_config("cep", cep)

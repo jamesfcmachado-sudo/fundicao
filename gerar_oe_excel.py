@@ -165,9 +165,9 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
     # ═══════════════════════════════════════════════
     # DADOS FORNECEDOR
     # ═══════════════════════════════════════════════
-    lw  = 20*mm
+    lw  = 24*mm   # aumentado para "Fornecedor" caber na linha
     lw2 = 15*mm
-    vw  = W * 0.50
+    vw  = W * 0.48
     vw2 = W - lw - vw - lw2
 
     def lbl(t): return Paragraph(f"<b>{t}</b>", PS("lb", fontSize=9, fontName="Helvetica-Bold"))
