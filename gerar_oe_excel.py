@@ -29,8 +29,10 @@ def gerar_oe_excel(template_bytes, numero_oe, nome_cliente, itens,
     ws["E15"] = config.get("telefone", "(11) 2954-9908")
     ws["M15"] = config.get("email", "comercial@metalpoli.com.br")
     ano = datetime.now().strftime("%y")
-    # Numero OE e ano juntos na mesma celula
+    # Numero e ano na mesma celula para ficar juntos
     ws["M5"] = f"Nº {numero_oe}/{ano}"
+    ws["N5"] = None
+    ws["O5"] = None
     ws["P5"] = None
     ws["C17"] = nome_cliente.upper()
 
@@ -202,25 +204,23 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
     # Larguras baseadas no PDF original (total W~257mm)
     # Nº pedido | OF | Ref | Liga | Corr | Cert | Cod Peça | Descrição | Peso | Qtde | Série | Pr.Un | Pr.Total
     # ═══════════════════════════════════════════════
+    # Proporcoes baseadas nas larguras reais do template Excel
+    _escala = W / 342.1
     CW = [
-        26*mm,   # Nº do pedido
-        14*mm,   # OF
-        20*mm,   # Referência
-        11*mm,   # Liga
-        13*mm,   # Corr.
-        17*mm,   # Certificado
-        36*mm,   # Codigo da Peça
-        30*mm,   # Descrição
-        16*mm,   # Peso uni.(kg)
-        12*mm,   # Qtde(pçs)
-        17*mm,   # Série
-        20*mm,   # Preço Un.(R$)
-        25*mm,   # Preço Total
+        23.6*mm*_escala,   # Nº do pedido
+        16.4*mm*_escala,   # OF
+        23.6*mm*_escala,   # Referência
+        14.7*mm*_escala,   # Liga
+        12.1*mm*_escala,   # Corr.
+        17.6*mm*_escala,   # Certificado
+        40.0*mm*_escala,   # Codigo da Peça
+        33.5*mm*_escala,   # Descrição
+        16.2*mm*_escala,   # Peso uni.(kg)
+        11.7*mm*_escala,   # Qtde(pçs)
+        18.3*mm*_escala,   # Série
+        26.1*mm*_escala,   # Preço Un.(R$)
+        23.3*mm*_escala,   # Preço Total
     ]
-    total_cw = sum(CW)
-    if total_cw > W:
-        fator = W / total_cw
-        CW = [c * fator for c in CW]
 
     def ph(t): return Paragraph(t, PS("hd", fontSize=7.5, fontName="Helvetica-Bold",
                                        alignment=TA_CENTER, leading=9, wordWrap='CJK'))
