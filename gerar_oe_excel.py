@@ -133,7 +133,7 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
 
     if logo_bytes:
         try:
-            logo_img = RLImage(io.BytesIO(logo_bytes), width=logo_w-4*mm, height=18*mm)
+            logo_img = RLImage(io.BytesIO(logo_bytes), width=logo_w-4*mm, height=24*mm)
             logo_cell = logo_img
         except Exception:
             logo_cell = Paragraph("", PS("lc"))
@@ -148,13 +148,16 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
                    PS("oe1", fontSize=12, fontName="Helvetica-Bold", alignment=TA_CENTER)),
          Paragraph(f"<b>Nº {numero_oe}/{ano}</b>",
                    PS("oe2", fontSize=12, fontName="Helvetica-Bold", alignment=TA_CENTER))],
-    ]], colWidths=[logo_w, titulo_w, oe_w])
+    ]], colWidths=[logo_w, titulo_w, oe_w], rowHeights=[28*mm])
 
     cab.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
         ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
         ("LINEBEFORE",   (2,0),(2,0),   0.8, BK),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",        (0,0),(0,0),   "CENTER"),
+        ("ALIGN",        (1,0),(1,0),   "CENTER"),
+        ("ALIGN",        (2,0),(2,0),   "CENTER"),
         ("LEFTPADDING",  (0,0),(-1,-1), 4),
         ("RIGHTPADDING", (0,0),(-1,-1), 4),
         ("TOPPADDING",   (0,0),(-1,-1), 4),
