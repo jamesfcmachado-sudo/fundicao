@@ -205,22 +205,10 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
     # Nº pedido | OF | Ref | Liga | Corr | Cert | Cod Peça | Descrição | Peso | Qtde | Série | Pr.Un | Pr.Total
     # ═══════════════════════════════════════════════
     # Proporcoes baseadas nas larguras reais do template Excel
-    _escala = W / 342.1
-    CW = [
-        23.6*mm*_escala,   # Nº do pedido
-        16.4*mm*_escala,   # OF
-        23.6*mm*_escala,   # Referência
-        14.7*mm*_escala,   # Liga
-        12.1*mm*_escala,   # Corr.
-        17.6*mm*_escala,   # Certificado
-        40.0*mm*_escala,   # Codigo da Peça
-        33.5*mm*_escala,   # Descrição
-        16.2*mm*_escala,   # Peso uni.(kg)
-        11.7*mm*_escala,   # Qtde(pçs)
-        18.3*mm*_escala,   # Série
-        26.1*mm*_escala,   # Preço Un.(R$)
-        23.3*mm*_escala,   # Preço Total
-    ]
+    # Total das proporcoes soma exatamente W
+    _base = [23.6, 16.4, 23.6, 14.7, 12.1, 17.6, 40.0, 33.5, 16.2, 11.7, 18.3, 26.1, 23.3]
+    _total_base = sum(_base)
+    CW = [b / _total_base * W for b in _base]
 
     def ph(t): return Paragraph(t, PS("hd", fontSize=7.5, fontName="Helvetica-Bold",
                                        alignment=TA_CENTER, leading=9, wordWrap='CJK'))
