@@ -17,6 +17,17 @@ from io import StringIO
 
 import pandas as pd
 import streamlit as st
+
+# Modulo de certificados
+try:
+    from certificados import (
+        init_certificados_db, tela_novo_certificado,
+        tela_consulta_certificados, tela_ensaios_mecanicos,
+        gerar_certificado_pdf
+    )
+    _CERTS_OK = True
+except Exception as _e_cert:
+    _CERTS_OK = False
 from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
