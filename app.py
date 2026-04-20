@@ -1,13 +1,4 @@
 # redeploy-mover-alterar
-try:
-    from certificados import (
-        init_certificados_db, tela_novo_certificado,
-        tela_consulta_certificados, tela_ensaios_mecanicos,
-        gerar_certificado_pdf
-    )
-    _CERTS_OK = True
-except Exception as _e_cert:
-    _CERTS_OK = False
 # deploy: PDF fiel ao template v2
 """
 Sistema de Controle de Fundição — interface Streamlit + SQLAlchemy (SQLite fundicao.db).
