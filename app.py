@@ -3622,7 +3622,7 @@ def pagina_consulta_oes():
                         _excel_bytes = configurar_impressao_excel(
                             _excel_bytes, _orientacao)
                         # Botoes download e visualizacao
-                        _dc1, _dc2, _dc3 = st.columns(3)
+                        _dc1, _dc2 = st.columns(2)
                         with _dc1:
                             st.download_button(
                                 f"⬇️ Baixar OE {_noe} em PDF",
@@ -3640,30 +3640,10 @@ def pagina_consulta_oes():
                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                 key=f"dl_xlsx_{_noe}",
                             )
-                        with _dc3:
-                            if st.button(f"👁️ Visualizar PDF na tela",
-                                         key=f"btn_view_{_noe}"):
-                                import base64 as _b64save
-                                st.session_state[f"_pdf_cache_{_noe}"] = (
-                                    _b64save.b64encode(_pdf_bytes).decode()
-                                )
 
                     except Exception as _ex:
                         st.error(f"Erro ao gerar OE: {_ex}")
-                        # Exibe PDF inline se solicitado
-                        _b64_cached = st.session_state.get(f"_pdf_cache_{_noe}", "")
-                        if _b64_cached:
-                            # Usa embed/object que funciona no Streamlit Cloud
-                            _html_pdf = (
-                                '<object data="data:application/pdf;base64,'
-                                + _b64_cached +
-                                '" type="application/pdf" width="100%" height="750px"'
-                                ' style="border:1px solid #444;border-radius:8px;margin-top:8px;">'
-                                '<p>Seu navegador não suporta visualização de PDF. '
-                                '<a href="data:application/pdf;base64,' + _b64_cached + '">Clique aqui para baixar.</a>'
-                                '</p></object>'
-                            )
-                            st.markdown(_html_pdf, unsafe_allow_html=True)
+
             st.divider()
 
     # ── Montar tabela de exibição ───────────────────────────────────────────
