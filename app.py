@@ -3827,7 +3827,7 @@ def pagina_consulta_oes():
     })
 
     # Selecionar linha para ver detalhes
-    st.caption("💡 **Clique em uma linha** da tabela abaixo para ver os detalhes, gerar PDF/Excel, alterar ou excluir a OE.")
+    st.caption("💡 **Clique em uma linha** da tabela abaixo para ver os detalhes e gerar PDF/Excel da OE.")
     evento = st.dataframe(
         df_exib,
         use_container_width=True,
@@ -3851,7 +3851,7 @@ def pagina_consulta_oes():
         num_of_sel = str(oe_row.get("num_of", oe_row.get("numero_of", "")))
 
         with st.expander(f"📋 Detalhes da OE {num_oe_sel} — OF {num_of_sel}", expanded=True):
-            st.caption("👆 Role para baixo para ver as opções de Alterar e Excluir.")
+
             d1, d2, d3, d4 = st.columns(4)
             d1.text_input("Nº OE", num_oe_sel, disabled=True)
             d2.text_input("OF", num_of_sel, disabled=True)
