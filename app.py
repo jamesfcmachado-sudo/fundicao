@@ -3643,26 +3643,24 @@ def pagina_consulta_oes():
                         with _dc3:
                             if st.button(f"👁️ Visualizar PDF na tela",
                                          key=f"btn_view_{_noe}"):
-                                st.session_state[f"_show_pdf_{_noe}"] = \
-                                    not st.session_state.get(f"_show_pdf_{_noe}", False)
+                                import base64 as _b64save
+                                st.session_state[f"_pdf_cache_{_noe}"] = (
+                                    _b64save.b64encode(_pdf_bytes).decode()
+                                )
 
                     except Exception as _ex:
                         st.error(f"Erro ao gerar OE: {_ex}")
                         # Exibe PDF inline se solicitado
-                        if st.session_state.get(f"_show_pdf_{_noe}", False) and "_pdf_bytes" in dir():
-                            try:
-                                import base64 as _b64v
-                                _b64_pdf = _b64v.b64encode(_pdf_bytes).decode()
-                                _html_pdf = (
-                                    '<iframe src="data:application/pdf;base64,'
-                                    + _b64_pdf +
-                                    '" width="100%" height="750px"'
-                                    ' style="border:1px solid #444;border-radius:8px;">'
-                                    '</iframe>'
-                                )
-                                st.markdown(_html_pdf, unsafe_allow_html=True)
-                            except Exception:
-                                pass
+                        _b64_cached = st.session_state.get(f"_pdf_cache_{_noe}", "")
+                        if _b64_cached:
+                            _html_pdf = (
+                                '<iframe src="data:application/pdf;base64,'
+                                + _b64_cached +
+                                '" width="100%" height="750px"'
+                                ' style="border:1px solid #444;border-radius:8px;margin-top:8px;">'
+                                '</iframe>'
+                            )
+                            st.markdown(_html_pdf, unsafe_allow_html=True)
             st.divider()
 
     # ── Montar tabela de exibição ───────────────────────────────────────────
