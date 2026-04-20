@@ -3047,10 +3047,17 @@ def pagina_nova_oe():
         from fundicao_db import engine as _eng_oe
         from sqlalchemy import text as _text_oe
         with _eng_oe.connect() as _conn_oe:
-            _row = _conn_oe.execute(_text_oe(
-                "SELECT MAX(CAST(numero_oe AS INTEGER)) FROM ordem_entrega "
-                "WHERE numero_oe ~ '^[0-9]+$'"
-            )).fetchone()
+            # Busca o maior numero entre ordem_entrega e oe_item
+            _row = _conn_oe.execute(_text_oe("""
+                SELECT GREATEST(
+                    COALESCE((SELECT MAX(CAST(numero_oe AS INTEGER))
+                              FROM ordem_entrega
+                              WHERE numero_oe ~ '^[0-9]+$'), 0),
+                    COALESCE((SELECT MAX(CAST(numero_oe AS INTEGER))
+                              FROM oe_item
+                              WHERE numero_oe ~ '^[0-9]+$'), 0)
+                )
+            """)).fetchone()
             proximo_num = (_row[0] or 1628) + 1
     except Exception:
         proximo_num = 1629
