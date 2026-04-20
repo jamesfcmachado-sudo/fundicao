@@ -128,14 +128,59 @@ def tela_novo_certificado():
     # ── Dados principais ──────────────────────────────────────────────────────
     with st.container(border=True):
         st.subheader("Dados Gerais")
+
+        # Busca clientes e OFs do banco para autocomplete
+        try:
+            with engine.connect() as _conn_ac:
+                _clientes_ac = _conn_ac.execute(text(
+                    "SELECT DISTINCT nome_cliente FROM ordem_fabricacao "
+                    "WHERE nome_cliente IS NOT NULL ORDER BY nome_cliente"
+                )).fetchall()
+                _clientes_lista = [r[0] for r in _clientes_ac]
+
+                _ofs_ac = _conn_ac.execute(text(
+                    "SELECT numero_of, nome_cliente, norma, liga "
+                    "FROM ordem_fabricacao ORDER BY numero_of"
+                )).fetchall()
+                _ofs_dict = {r[0]: {"cliente": r[1], "norma": r[2] or "", "liga": r[3] or ""}
+                             for r in _ofs_ac}
+        except Exception:
+            _clientes_lista = []
+            _ofs_dict = {}
+
+        # Campo OF para buscar dados automaticamente
+        _of_cert = st.text_input(
+            "OF (opcional) — preenche Cliente, Norma e Liga automaticamente",
+            placeholder="Ex: 015B6", key="cert_of_ref"
+        )
+        if _of_cert.strip() and _of_cert.strip() in _ofs_dict:
+            _of_data = _ofs_dict[_of_cert.strip()]
+            st.success(f"OF encontrada: Cliente {_of_data['cliente']}")
+        else:
+            _of_data = {"cliente": "", "norma": "", "liga": ""}
+
         c1, c2, c3 = st.columns(3)
         with c1:
-            cliente = st.text_input("Cliente *", key="cert_cliente")
+            # Cliente com autocomplete
+            _cliente_default = _of_data["cliente"] or ""
+            cliente = st.selectbox(
+                "Cliente *",
+                options=[""] + _clientes_lista,
+                index=(_clientes_lista.index(_cliente_default) + 1)
+                      if _cliente_default in _clientes_lista else 0,
+                key="cert_cliente"
+            )
+            if not cliente:
+                cliente = st.text_input("Ou digite o cliente", key="cert_cliente_manual")
         with c2:
-            norma = st.text_input("Norma da Liga", placeholder="Ex: ASTM-A351 (CF8)",
-                                   key="cert_norma")
+            norma = st.text_input("Norma da Liga",
+                value=_of_data["norma"],
+                placeholder="Ex: ASTM-A351 (CF8)",
+                key="cert_norma")
         with c3:
-            liga = st.text_input("Liga", placeholder="Ex: CF8", key="cert_liga")
+            liga = st.text_input("Liga",
+                value=_of_data["liga"],
+                placeholder="Ex: CF8", key="cert_liga")
 
         c4, c5, c6 = st.columns(3)
         with c4:
