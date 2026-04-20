@@ -1,4 +1,13 @@
 # redeploy-mover-alterar
+try:
+    from certificados import (
+        init_certificados_db, tela_novo_certificado,
+        tela_consulta_certificados, tela_ensaios_mecanicos,
+        gerar_certificado_pdf
+    )
+    _CERTS_OK = True
+except Exception as _e_cert:
+    _CERTS_OK = False
 # deploy: PDF fiel ao template v2
 """
 Sistema de Controle de Fundição — interface Streamlit + SQLAlchemy (SQLite fundicao.db).
@@ -3194,6 +3203,21 @@ def main() -> None:
         pagina_nova_of()
     elif pagina == "Nova Ordem de Entrega":
         pagina_nova_oe()
+    elif pagina == "Novo Certificado":
+        if _CERTS_OK:
+            tela_novo_certificado()
+        else:
+            st.error("Modulo de certificados nao disponivel.")
+    elif pagina == "Consulta de Certificados":
+        if _CERTS_OK:
+            tela_consulta_certificados()
+        else:
+            st.error("Modulo de certificados nao disponivel.")
+    elif pagina == "Ensaios Mecanicos":
+        if _CERTS_OK:
+            tela_ensaios_mecanicos()
+        else:
+            st.error("Modulo de certificados nao disponivel.")
     elif pagina == "Consulta de OEs":
         pagina_consulta_oes()
     elif pagina == "Lançar Corrida":
