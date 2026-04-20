@@ -3208,20 +3208,23 @@ def main() -> None:
     elif pagina == "Nova Ordem de Entrega":
         pagina_nova_oe()
     elif pagina == "Novo Certificado":
-        if _CERTS_OK:
-            tela_novo_certificado()
-        else:
-            st.error("Modulo de certificados nao disponivel.")
+        try:
+            from certificados import tela_novo_certificado as _tnc
+            _tnc()
+        except Exception as _ec:
+            st.error(f"Erro ao carregar certificados: {_ec}")
     elif pagina == "Consulta de Certificados":
-        if _CERTS_OK:
-            tela_consulta_certificados()
-        else:
-            st.error("Modulo de certificados nao disponivel.")
-    elif pagina == "Ensaios Mecanicos":
-        if _CERTS_OK:
-            tela_ensaios_mecanicos()
-        else:
-            st.error("Modulo de certificados nao disponivel.")
+        try:
+            from certificados import tela_consulta_certificados as _tcc
+            _tcc()
+        except Exception as _ec:
+            st.error(f"Erro ao carregar certificados: {_ec}")
+    elif pagina == "Ensaios Mecânicos":
+        try:
+            from certificados import tela_ensaios_mecanicos as _tem
+            _tem()
+        except Exception as _ec:
+            st.error(f"Erro ao carregar ensaios: {_ec}")
     elif pagina == "Consulta de OEs":
         pagina_consulta_oes()
     elif pagina == "Lançar Corrida":
