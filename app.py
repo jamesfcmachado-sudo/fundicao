@@ -3209,19 +3209,22 @@ def main() -> None:
         pagina_nova_oe()
     elif pagina == "Novo Certificado":
         try:
-            from certificados import tela_novo_certificado as _tnc
+            from certificados import init_certificados_db as _icd, tela_novo_certificado as _tnc
+            _icd()
             _tnc()
         except Exception as _ec:
             st.error(f"Erro ao carregar certificados: {_ec}")
     elif pagina == "Consulta de Certificados":
         try:
-            from certificados import tela_consulta_certificados as _tcc
+            from certificados import init_certificados_db as _icd2, tela_consulta_certificados as _tcc
+            _icd2()
             _tcc()
         except Exception as _ec:
             st.error(f"Erro ao carregar certificados: {_ec}")
     elif pagina == "Ensaios Mecânicos":
         try:
-            from certificados import tela_ensaios_mecanicos as _tem
+            from certificados import init_certificados_db as _icd3, tela_ensaios_mecanicos as _tem
+            _icd3()
             _tem()
         except Exception as _ec:
             st.error(f"Erro ao carregar ensaios: {_ec}")
