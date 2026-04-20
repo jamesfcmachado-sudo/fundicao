@@ -1,3 +1,4 @@
+# redeploy-mover-alterar
 # deploy: PDF fiel ao template v2
 """
 Sistema de Controle de Fundição — interface Streamlit + SQLAlchemy (SQLite fundicao.db).
