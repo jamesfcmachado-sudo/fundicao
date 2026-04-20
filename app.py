@@ -3653,12 +3653,15 @@ def pagina_consulta_oes():
                         # Exibe PDF inline se solicitado
                         _b64_cached = st.session_state.get(f"_pdf_cache_{_noe}", "")
                         if _b64_cached:
+                            # Usa embed/object que funciona no Streamlit Cloud
                             _html_pdf = (
-                                '<iframe src="data:application/pdf;base64,'
+                                '<object data="data:application/pdf;base64,'
                                 + _b64_cached +
-                                '" width="100%" height="750px"'
+                                '" type="application/pdf" width="100%" height="750px"'
                                 ' style="border:1px solid #444;border-radius:8px;margin-top:8px;">'
-                                '</iframe>'
+                                '<p>Seu navegador não suporta visualização de PDF. '
+                                '<a href="data:application/pdf;base64,' + _b64_cached + '">Clique aqui para baixar.</a>'
+                                '</p></object>'
                             )
                             st.markdown(_html_pdf, unsafe_allow_html=True)
             st.divider()
