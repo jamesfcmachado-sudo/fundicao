@@ -16,7 +16,6 @@ Na raiz do projeto:
     streamlit run app.py
 """
 
-from __future__ import annotations
 
 import json
 import re
