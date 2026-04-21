@@ -163,9 +163,14 @@ def tela_novo_certificado():
 
         if _of_cert.strip() and _of_cert.strip() in _ofs_dict:
             _of_data = _ofs_dict[_of_cert.strip()]
+            st.session_state["_cert_of_data"] = _of_data
             st.success(f"✅ OF {_of_cert.strip()} — Cliente: {_of_data['cliente']}")
+        elif st.session_state.get("_cert_of_data") and _of_cert.strip():
+            _of_data = st.session_state["_cert_of_data"]
         else:
             _of_data = {"cliente": "", "norma": "", "liga": ""}
+            if not _of_cert.strip():
+                st.session_state.pop("_cert_of_data", None)
 
     # ── Dados principais ──────────────────────────────────────────────────────
     with st.container(border=True):
@@ -181,6 +186,11 @@ def tela_novo_certificado():
                 _clientes_lista = [r[0] for r in _clientes_ac]
         except Exception:
             _clientes_lista = []
+
+        # Preenche automaticamente a partir da OF
+        _cliente_auto = _of_data.get("cliente", "")
+        _norma_auto   = _of_data.get("norma", "")
+        _liga_auto    = _of_data.get("liga", "")
 
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -237,16 +247,35 @@ def tela_novo_certificado():
                     try:
                         with engine.connect() as conn:
                             row_corr = conn.execute(text("""
-                                SELECT composicao_quimica_pct
+                                SELECT "C","Si","Mn","P","S","Cr","Ni","Mo",
+                                       "Cu","W","Nb","V","Fe","N","Mg","B",
+                                       composicao_quimica_pct
                                 FROM corrida
                                 WHERE numero_corrida = :nc
                                 ORDER BY criado_em DESC LIMIT 1
                             """), {"nc": num_corr.strip()}).fetchone()
-                            if row_corr and row_corr[0]:
-                                comp = row_corr[0] if isinstance(row_corr[0], dict) else json.loads(row_corr[0])
-                                st.success(f"Composição encontrada para corrida {num_corr}")
+                            if row_corr:
+                                _rm = row_corr._mapping
+                                # Tenta colunas individuais primeiro
+                                comp_cols = {}
+                                for el in ["C","Si","Mn","P","S","Cr","Ni","Mo","Cu","W","Nb","V","Fe","N","Mg","B"]:
+                                    v = _rm.get(el)
+                                    if v is not None:
+                                        try:
+                                            comp_cols[el] = float(v)
+                                        except Exception:
+                                            pass
+                                if any(v > 0 for v in comp_cols.values()):
+                                    comp = comp_cols
+                                    st.success(f"✅ Composição encontrada para corrida {num_corr.strip()}")
+                                elif _rm.get("composicao_quimica_pct"):
+                                    raw = _rm["composicao_quimica_pct"]
+                                    comp = raw if isinstance(raw, dict) else json.loads(raw)
+                                    st.success(f"✅ Composição encontrada para corrida {num_corr.strip()}")
+                                else:
+                                    st.warning(f"Corrida {num_corr.strip()} sem composição química.")
                     except Exception as e:
-                        pass
+                        st.warning(f"Corrida não encontrada: {e}")
 
                 # Exibe composição química
                 ELEM = ["C","Si","Mn","P","S","Cr","Ni","Mo","Cu","W","Nb","V","Fe","CE"]
