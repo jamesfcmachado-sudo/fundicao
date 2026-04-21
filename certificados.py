@@ -278,12 +278,14 @@ def tela_novo_certificado():
                 ELEM = ["C","Si","Mn","P","S","Cr","Ni","Mo","Cu","W","Nb","V","Fe","CE"]
                 cols_elem = st.columns(7)
                 comp_editada = {}
+                _key_comp = f"_comp_{i}_{num_corr.strip()}"
+                _comp_loaded = st.session_state.get(_key_comp, comp)
                 for j, el in enumerate(ELEM):
                     with cols_elem[j % 7]:
-                        val = comp.get(el, comp.get(el.lower(), 0.0)) or 0.0
+                        val = _comp_loaded.get(el, _comp_loaded.get(el.lower(), 0.0)) or 0.0
                         comp_editada[el] = st.number_input(
                             el, value=float(val), format="%.4f",
-                            key=f"cert_comp_{i}_{el}", min_value=0.0
+                            key=f"cert_comp_{i}_{el}_{num_corr.strip()}", min_value=0.0
                         )
 
                 corridas.append({
