@@ -274,25 +274,30 @@ def tela_novo_certificado():
                 elif _key_comp in st.session_state:
                     st.success(f"✅ Composição carregada — {num_corr.strip()}")
 
-                # Campos de composição — usa session_state se disponivel
+                # Tabela editável de composição química
                 _comp_loaded = st.session_state.get(_key_comp, {})
-                cols_elem = st.columns(7)
-                comp_editada = {}
-                for j, el in enumerate(ELEM):
-                    with cols_elem[j % 7]:
-                        # Valor: session_state tem prioridade, depois comp_loaded
-                        _vk = f"cert_comp_{i}_{el}"
-                        if _btn_buscar and _key_comp in st.session_state:
-                            # Acabou de buscar - usa valor do banco
-                            val = float(_comp_loaded.get(el, 0.0) or 0.0)
-                        else:
-                            # Usa o que ja estava no campo
-                            val = float(st.session_state.get(_vk,
-                                  _comp_loaded.get(el, 0.0) or 0.0))
-                        comp_editada[el] = st.number_input(
-                            el, value=val, format="%.4f",
-                            key=_vk, min_value=0.0
-                        )
+                if _comp_loaded:
+                    import pandas as _pd_comp
+                    _comp_df = _pd_comp.DataFrame([{
+                        el: float(_comp_loaded.get(el, 0.0) or 0.0)
+                        for el in ELEM
+                    }])
+                    _comp_edited = st.data_editor(
+                        _comp_df,
+                        key=f"cert_comp_table_{i}",
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            el: st.column_config.NumberColumn(
+                                el, format="%.4f", min_value=0.0
+                            ) for el in ELEM
+                        }
+                    )
+                    comp_editada = {el: float(_comp_edited.iloc[0][el] or 0.0)
+                                    for el in ELEM}
+                else:
+                    st.caption("Digite o número da corrida e clique 🔍 Buscar")
+                    comp_editada = {el: 0.0 for el in ELEM}
 
                 corridas.append({
                     "num_of": nof_corr.strip(),
