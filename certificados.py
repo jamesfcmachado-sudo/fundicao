@@ -266,29 +266,32 @@ def tela_novo_certificado():
                                 raw = _rc[0]
                                 _comp_found = raw if isinstance(raw, dict) else json.loads(raw)
                                 st.session_state[_key_comp] = _comp_found
-                                for el in ELEM:
-                                    val = _comp_found.get(el, 0.0) or 0.0
-                                    st.session_state[f"cert_comp_{i}_{el}"] = float(val)
                                 st.success(f"✅ Composição da corrida {num_corr.strip()} carregada!")
-                                st.rerun()
                             else:
                                 st.warning(f"Corrida {num_corr.strip()} sem composição.")
                     except Exception as _e:
                         st.warning(f"Erro: {_e}")
+                elif _key_comp in st.session_state:
+                    st.success(f"✅ Composição carregada — {num_corr.strip()}")
 
-                if _key_comp in st.session_state:
-                    st.success(f"✅ Composição carregada")
-
+                # Campos de composição — usa session_state se disponivel
                 _comp_loaded = st.session_state.get(_key_comp, {})
                 cols_elem = st.columns(7)
                 comp_editada = {}
                 for j, el in enumerate(ELEM):
                     with cols_elem[j % 7]:
-                        val = float(st.session_state.get(f"cert_comp_{i}_{el}",
-                              _comp_loaded.get(el, 0.0) or 0.0))
+                        # Valor: session_state tem prioridade, depois comp_loaded
+                        _vk = f"cert_comp_{i}_{el}"
+                        if _btn_buscar and _key_comp in st.session_state:
+                            # Acabou de buscar - usa valor do banco
+                            val = float(_comp_loaded.get(el, 0.0) or 0.0)
+                        else:
+                            # Usa o que ja estava no campo
+                            val = float(st.session_state.get(_vk,
+                                  _comp_loaded.get(el, 0.0) or 0.0))
                         comp_editada[el] = st.number_input(
                             el, value=val, format="%.4f",
-                            key=f"cert_comp_{i}_{el}", min_value=0.0
+                            key=_vk, min_value=0.0
                         )
 
                 corridas.append({
