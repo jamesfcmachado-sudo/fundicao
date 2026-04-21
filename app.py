@@ -2345,16 +2345,25 @@ def _atualizar_ofs(arquivo) -> None:
         if f"{_col}__exib" in df.columns:
             df_exib[_col] = df[f"{_col}__exib"]
 
-    st.info(f"Previa — {len(df)} linhas encontradas:")
+    st.info(f"Prévia — {len(df)} linhas encontradas:")
     st.dataframe(df_exib.head(), height=400, use_container_width=True, hide_index=True)
 
-    if not st.button("Confirmar atualizacao de OFs", key="btn_confirmar_atualizar_ofs"):
+    # Salva df no session_state para nao perder apos rerun
+    st.session_state["_df_atualizar_ofs"] = df
+
+    if not st.button("✅ Confirmar atualização de OFs", key="btn_confirmar_atualizar_ofs",
+                     type="primary"):
         return
+
+    # Recupera df do session_state
+    df = st.session_state.get("_df_atualizar_ofs", df)
 
     inseridos = 0
     atualizados = 0
     erros = []
     now = datetime.now().astimezone()
+    barra = st.progress(0, text="Iniciando...")
+    total_linhas = max(len(df), 1)
 
     for _, row in df.iterrows():
         numero_of = str(row.get("numero_of", "") or "").strip()
@@ -2390,6 +2399,8 @@ def _atualizar_ofs(arquivo) -> None:
             except Exception:
                 return None
 
+        barra.progress(min((_ + 1) / total_linhas, 1.0),
+                       text=f"Processando {_ + 1}/{total_linhas}...")
         try:
             with db_session() as db:
                 of_existente = db.scalar(
