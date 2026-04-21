@@ -332,23 +332,44 @@ def tela_novo_certificado():
                     })
 
     # ── Busca dados da OF para preencher itens ───────────────────────────────
-    _of_ref = st.session_state.get("_cert_of_data", {})
     _pedido_auto  = ""
     _modelo_auto  = ""
     _descricao_auto = ""
+    _of_key = f"_cert_of_item_{_of_cert.strip()}"
+
     if _of_cert.strip() and _of_cert.strip() in _ofs_dict:
-        try:
-            with engine.connect() as _conn_of_item:
-                _of_item = _conn_of_item.execute(text("""
-                    SELECT numero_pedido, numero_modelo, descricao_peca, numero_desenho
-                    FROM ordem_fabricacao WHERE numero_of = :of
-                """), {"of": _of_cert.strip()}).fetchone()
-                if _of_item:
-                    _pedido_auto   = str(_of_item[0] or "")
-                    _modelo_auto   = str(_of_item[1] or "")
-                    _descricao_auto = str(_of_item[2] or _of_item[3] or "")
-        except Exception:
-            pass
+        # Verifica se ja tem no session_state
+        if _of_key not in st.session_state:
+            try:
+                with engine.connect() as _conn_of_item:
+                    _of_item = _conn_of_item.execute(text("""
+                        SELECT numero_pedido, numero_modelo,
+                               descricao_peca, numero_desenho
+                        FROM ordem_fabricacao WHERE numero_of = :of
+                    """), {"of": _of_cert.strip()}).fetchone()
+                    if _of_item:
+                        st.session_state[_of_key] = {
+                            "pedido":   str(_of_item[0] or ""),
+                            "modelo":   str(_of_item[1] or ""),
+                            "descricao": str(_of_item[2] or _of_item[3] or ""),
+                        }
+            except Exception:
+                pass
+
+        _of_item_data = st.session_state.get(_of_key, {})
+        _pedido_auto   = _of_item_data.get("pedido", "")
+        _modelo_auto   = _of_item_data.get("modelo", "")
+        _descricao_auto = _of_item_data.get("descricao", "")
+
+        # Seta no session_state para os campos renderizados
+        n_itens_atual = int(st.session_state.get("cert_n_itens", 1))
+        for _ii in range(n_itens_atual):
+            if f"cert_ped_{_ii}" not in st.session_state or not st.session_state.get(f"cert_ped_{_ii}"):
+                st.session_state[f"cert_ped_{_ii}"] = _pedido_auto
+            if f"cert_mod_{_ii}" not in st.session_state or not st.session_state.get(f"cert_mod_{_ii}"):
+                st.session_state[f"cert_mod_{_ii}"] = _modelo_auto
+            if f"cert_desc_{_ii}" not in st.session_state or not st.session_state.get(f"cert_desc_{_ii}"):
+                st.session_state[f"cert_desc_{_ii}"] = _descricao_auto
 
     # Busca ultima serie emitida para esta OF nos certificados anteriores
     def _proxima_serie(of_num, qtd_nova):
@@ -411,6 +432,33 @@ def tela_novo_certificado():
                     qtd = st.number_input("Quantidade", min_value=0, value=0,
                                            key=f"cert_qtd_{i}")
                 with ir5:
+                    # Calcula e seta serie no session_state
+                    _qtd_atual = st.session_state.get(f"cert_qtd_{i}", 0)
+                    if _qtd_atual > 0 and not st.session_state.get(f"cert_serie_{i}"):
+                        try:
+                            import re as _re3
+                            with engine.connect() as _conn_s3:
+                                _rows_s3 = _conn_s3.execute(text("""
+                                    SELECT ci.series
+                                    FROM certificado_item ci
+                                    JOIN certificado_qualidade cq ON cq.id = ci.certificado_id
+                                    JOIN certificado_corrida cc ON cc.certificado_id = cq.id
+                                    WHERE cc.numero_of = :of
+                                    AND ci.series IS NOT NULL AND ci.series != ''
+                                    ORDER BY cq.criado_em DESC
+                                """), {"of": _of_cert.strip() or ""}).fetchall()
+                                _ult = 0
+                                for _rs3 in _rows_s3:
+                                    _ns = _re3.findall(r'\d+', str(_rs3[0] or ""))
+                                    if _ns:
+                                        _ult = max(_ult, max(int(n) for n in _ns))
+                                _ini = _ult + _serie_acumulada + 1
+                                _fim2 = _ini + _qtd_atual - 1
+                                _sa = f"{_ini} A {_fim2}" if _qtd_atual > 1 else str(_ini)
+                                st.session_state[f"cert_serie_{i}"] = _sa
+                        except Exception:
+                            pass
+
                     # Calcula serie automaticamente
                     if qtd > 0:
                         _of_para_serie = _of_cert.strip() if _of_cert.strip() else ""
