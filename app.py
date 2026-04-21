@@ -1992,6 +1992,8 @@ def _importar_ofs(arquivo) -> None:
     if not st.button("✅ Confirmar importação de OFs", key="btn_confirmar_ofs", type="primary"):
         return
     df = st.session_state.get("_df_imp_ofs", df)
+    barra = st.progress(0, text="Iniciando importação de OFs...")
+    total_linhas = max(len(df), 1)
 
     # Guarda de segurança extra: força tipos antes do loop (cobre NaN/NaT residuais)
     for _c in _OF_COLS_INT:
@@ -2190,6 +2192,8 @@ def _importar_corridas(arquivo) -> None:
     if not st.button("✅ Confirmar importação de Corridas", key="btn_confirmar_corridas", type="primary"):
         return
     df = st.session_state.get("_df_imp_corridas", df)
+    barra = st.progress(0, text="Iniciando importação de Corridas...")
+    total_linhas = max(len(df), 1)
 
     # Guarda de segurança extra para Corridas
     for _c in _CORRIDA_COLS_INT:
@@ -2370,6 +2374,7 @@ def _atualizar_ofs(arquivo) -> None:
     total_linhas = max(len(df), 1)
 
     for _, row in df.iterrows():
+        barra.progress(min((_ + 1) / total_linhas, 1.0), text=f"Processando {_ + 1}/{total_linhas}...")
         numero_of = str(row.get("numero_of", "") or "").strip()
         if not numero_of:
             continue
@@ -2502,6 +2507,8 @@ def _atualizar_corridas(arquivo) -> None:
     ignorados = 0
     erros = []
     now = datetime.now().astimezone()
+    barra = st.progress(0, text="Iniciando atualização de Corridas...")
+    total_linhas = max(len(df), 1)
 
     ELEMENTOS_Q = ["C","Si","Mn","P","S","Cr","Ni","Mo","Cu","W","Nb","B","CE","V","Co","Fe","N","Mg"]
 
@@ -2703,6 +2710,7 @@ def _importar_oes(arquivo) -> None:
         except Exception as e:
             erros += 1
 
+    barra.progress(1.0, text="Concluído!")
     st.success(f"OEs importadas: **{inseridos}** | Erros: **{erros}**")
 
 
@@ -2746,6 +2754,7 @@ def _atualizar_oes(arquivo) -> None:
     from sqlalchemy import text as _text_upd_oe
 
     for _, row in df.iterrows():
+        barra.progress(min((_ + 1) / total_linhas, 1.0), text=f"Processando {_ + 1}/{total_linhas}...")
         def _v(c, d=""):
             v = row.get(c, d)
             return d if (v is None or (isinstance(v, float) and pd.isna(v))) else v
@@ -2797,6 +2806,7 @@ def _atualizar_oes(arquivo) -> None:
         except Exception as e:
             erros += 1
 
+    barra.progress(1.0, text="Concluído!")
     st.success(f"OEs atualizadas: **{atualizados}** | Novas: **{inseridos}** | Erros: **{erros}**")
 
 
@@ -2860,6 +2870,7 @@ def _importar_certificados(arquivo) -> None:
         except Exception as e:
             erros += 1
 
+    barra.progress(1.0, text="Concluído!")
     st.success(f"Certificados importados: **{inseridos}** | Erros: **{erros}**")
 
 
@@ -2932,6 +2943,7 @@ def _atualizar_certificados(arquivo) -> None:
         except Exception as e:
             erros += 1
 
+    barra.progress(1.0, text="Concluído!")
     st.success(f"Certificados atualizados: **{atualizados}** | Novos: **{inseridos}** | Erros: **{erros}**")
 
 def tela_importar_excel():
