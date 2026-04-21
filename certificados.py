@@ -243,29 +243,36 @@ def tela_novo_certificado():
 
                 # Busca composição automática
                 comp = {}
+                # Botao para buscar composicao
                 if num_corr.strip():
-                    try:
-                        with engine.connect() as conn:
-                            # Busca corrida com composição quimica preenchida
-                            row_corr = conn.execute(text("""
-                                SELECT composicao_quimica_pct, liga, norma
-                                FROM corrida
-                                WHERE numero_corrida = :nc
-                                AND composicao_quimica_pct IS NOT NULL
-                                AND composicao_quimica_pct::text != '{}'
-                                ORDER BY criado_em DESC LIMIT 1
-                            """), {"nc": num_corr.strip()}).fetchone()
-                            if row_corr:
-                                raw = row_corr[0]
-                                comp = raw if isinstance(raw, dict) else json.loads(raw)
-                                if comp:
-                                    st.success(f"✅ Composição encontrada para corrida {num_corr.strip()}")
+                    _key_comp = f"_comp_{i}_{num_corr.strip()}"
+                    if st.button(f"🔍 Buscar composição da corrida {num_corr.strip()}",
+                                 key=f"btn_comp_{i}"):
+                        try:
+                            with engine.connect() as _conn_comp:
+                                _rc = _conn_comp.execute(text("""
+                                    SELECT composicao_quimica_pct
+                                    FROM corrida
+                                    WHERE numero_corrida = :nc
+                                    AND composicao_quimica_pct IS NOT NULL
+                                    AND composicao_quimica_pct::text != '{}'
+                                    ORDER BY criado_em DESC LIMIT 1
+                                """), {"nc": num_corr.strip()}).fetchone()
+                                if _rc and _rc[0]:
+                                    raw = _rc[0]
+                                    _comp_found = raw if isinstance(raw, dict) else json.loads(raw)
+                                    st.session_state[_key_comp] = _comp_found
+                                    st.success(f"✅ Composição encontrada!")
+                                    st.rerun()
                                 else:
-                                    st.warning(f"Corrida {num_corr.strip()} sem composição química.")
-                            else:
-                                st.warning(f"Corrida {num_corr.strip()} não encontrada ou sem composição.")
-                    except Exception as e:
-                        st.warning(f"Erro ao buscar corrida: {e}")
+                                    st.warning(f"Corrida {num_corr.strip()} sem composição.")
+                        except Exception as _e:
+                            st.warning(f"Erro: {_e}")
+
+                    # Carrega do session_state se disponivel
+                    if _key_comp in st.session_state:
+                        comp = st.session_state[_key_comp]
+                        st.success(f"✅ Composição carregada para corrida {num_corr.strip()}")
 
                 # Exibe composição química
                 ELEM = ["C","Si","Mn","P","S","Cr","Ni","Mo","Cu","W","Nb","V","Fe","CE"]
