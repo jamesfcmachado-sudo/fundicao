@@ -1988,8 +1988,10 @@ def _importar_ofs(arquivo) -> None:
     st.info(f"Prévia — {len(df)} linhas encontradas:")
     st.dataframe(df_exib.head(), height=400, use_container_width=True, hide_index=True)
 
-    if not st.button("✅ Confirmar importação de OFs", key="btn_confirmar_ofs"):
+    st.session_state["_df_imp_ofs"] = df
+    if not st.button("✅ Confirmar importação de OFs", key="btn_confirmar_ofs", type="primary"):
         return
+    df = st.session_state.get("_df_imp_ofs", df)
 
     # Guarda de segurança extra: força tipos antes do loop (cobre NaN/NaT residuais)
     for _c in _OF_COLS_INT:
@@ -2184,8 +2186,10 @@ def _importar_corridas(arquivo) -> None:
     st.info(f"Prévia — {len(df)} linhas encontradas:")
     st.dataframe(df_exib.head(), height=400, use_container_width=True, hide_index=True)
 
-    if not st.button("✅ Confirmar importação de Corridas", key="btn_confirmar_corridas"):
+    st.session_state["_df_imp_corridas"] = df
+    if not st.button("✅ Confirmar importação de Corridas", key="btn_confirmar_corridas", type="primary"):
         return
+    df = st.session_state.get("_df_imp_corridas", df)
 
     # Guarda de segurança extra para Corridas
     for _c in _CORRIDA_COLS_INT:
@@ -2488,8 +2492,10 @@ def _atualizar_corridas(arquivo) -> None:
     st.info(f"Previa — {len(df)} linhas encontradas:")
     st.dataframe(df.head(), height=400, use_container_width=True, hide_index=True)
 
-    if not st.button("Confirmar atualizacao de Corridas", key="btn_confirmar_atualizar_corridas"):
+    st.session_state["_df_atualizar_corridas"] = df
+    if not st.button("✅ Confirmar atualização de Corridas", key="btn_confirmar_atualizar_corridas", type="primary"):
         return
+    df = st.session_state.get("_df_atualizar_corridas", df)
 
     inseridos = 0
     atualizados = 0
@@ -2643,8 +2649,10 @@ def _importar_oes(arquivo) -> None:
     st.info(f"Prévia — {len(df)} linhas encontradas:")
     st.dataframe(df.head(), use_container_width=True, hide_index=True)
 
-    if not st.button("✅ Confirmar importação de OEs", key="btn_confirmar_oes"):
+    st.session_state["_df_imp_oes"] = df
+    if not st.button("✅ Confirmar importação de OEs", key="btn_confirmar_oes", type="primary"):
         return
+    df = st.session_state.get("_df_imp_oes", df)
 
     inseridos = erros = 0
     now = datetime.now().astimezone()
@@ -2727,8 +2735,10 @@ def _atualizar_oes(arquivo) -> None:
     st.info(f"Prévia — {len(df)} linhas:")
     st.dataframe(df.head(), use_container_width=True, hide_index=True)
 
-    if not st.button("✅ Confirmar atualização de OEs", key="btn_atualizar_oes"):
+    st.session_state["_df_atu_oes"] = df
+    if not st.button("✅ Confirmar atualização de OEs", key="btn_atualizar_oes", type="primary"):
         return
+    df = st.session_state.get("_df_atu_oes", df)
 
     atualizados = inseridos = erros = 0
     now = datetime.now().astimezone()
@@ -2815,8 +2825,10 @@ def _importar_certificados(arquivo) -> None:
     st.info(f"Prévia — {len(df)} linhas:")
     st.dataframe(df.head(), use_container_width=True, hide_index=True)
 
-    if not st.button("✅ Confirmar importação de Certificados", key="btn_confirmar_certs"):
+    st.session_state["_df_imp_certs"] = df
+    if not st.button("✅ Confirmar importação de Certificados", key="btn_confirmar_certs", type="primary"):
         return
+    df = st.session_state.get("_df_imp_certs", df)
 
     inseridos = erros = 0
     now = datetime.now().astimezone()
@@ -2875,8 +2887,10 @@ def _atualizar_certificados(arquivo) -> None:
     st.info(f"Prévia — {len(df)} linhas:")
     st.dataframe(df.head(), use_container_width=True, hide_index=True)
 
-    if not st.button("✅ Confirmar atualização de Certificados", key="btn_atualizar_certs"):
+    st.session_state["_df_atu_certs"] = df
+    if not st.button("✅ Confirmar atualização de Certificados", key="btn_atualizar_certs", type="primary"):
         return
+    df = st.session_state.get("_df_atu_certs", df)
 
     atualizados = inseridos = erros = 0
     now = datetime.now().astimezone()
