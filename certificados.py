@@ -113,12 +113,16 @@ def tela_novo_certificado():
     engine = _get_engine()
 
     # Tipo de template
-    tipo = st.radio(
+    _tipo_raw = st.radio(
         "Tipo de certificado:",
         options=["sem_ensaio", "com_ensaio"],
         format_func=lambda x: "Sem Ensaio Mecânico" if x == "sem_ensaio" else "Com Ensaio Mecânico",
         horizontal=True,
         key="tipo_cert"
+    )
+    # Garante que tipo seja sempre string
+    tipo = str(_tipo_raw) if not isinstance(_tipo_raw, dict) else (
+        "com_ensaio" if _tipo_raw.get("com_ensaio") else "sem_ensaio"
     )
 
     # ── Número do certificado editável ──────────────────────────────────────
@@ -682,11 +686,13 @@ def tela_consulta_certificados():
 
     st.caption("💡 **Clique em uma linha** para ver detalhes e gerar o certificado.")
     df_exib = df.drop(columns=["id"])
-    # Normaliza tipo_template que pode ser string ou dict
     def _norm_tipo(v):
+        if v is None: return "Sem Ensaio"
         if isinstance(v, dict):
             return "Com Ensaio" if v.get("com_ensaio") else "Sem Ensaio"
-        return {"sem_ensaio": "Sem Ensaio", "com_ensaio": "Com Ensaio"}.get(str(v), str(v))
+        s = str(v)
+        if "com_ensaio" in s: return "Com Ensaio"
+        return "Sem Ensaio"
     df_exib["Tipo"] = df_exib["Tipo"].apply(_norm_tipo)
 
     evento = st.dataframe(df_exib, use_container_width=True, hide_index=True,
