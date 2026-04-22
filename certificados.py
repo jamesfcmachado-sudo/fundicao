@@ -672,16 +672,7 @@ def tela_consulta_certificados():
     df = pd.DataFrame(rows, columns=["Nº Cert","Cliente","Norma","Liga",
                                       "Data","Tipo","id","Corridas"])
 
-    # Aplica filtros
-    if f_num.strip():
-        df = df[df["Nº Cert"].str.contains(f_num.strip(), case=False, na=False)]
-    if f_cli.strip():
-        df = df[df["Cliente"].str.contains(f_cli.strip(), case=False, na=False)]
-    if f_corrida.strip():
-        df = df[df["Corridas"].str.contains(f_corrida.strip(), case=False, na=False)]
-
-    m1, m2 = st.columns(2)
-    # Normaliza tipo antes de qualquer operacao
+    # Normaliza tipo IMEDIATAMENTE apos criar o DataFrame
     def _norm_tipo(v):
         if v is None: return "Sem Ensaio"
         if isinstance(v, dict):
@@ -691,6 +682,15 @@ def tela_consulta_certificados():
         return "Sem Ensaio"
     df["Tipo"] = df["Tipo"].apply(_norm_tipo)
 
+    # Aplica filtros
+    if f_num.strip():
+        df = df[df["Nº Cert"].str.contains(f_num.strip(), case=False, na=False)]
+    if f_cli.strip():
+        df = df[df["Cliente"].str.contains(f_cli.strip(), case=False, na=False)]
+    if f_corrida.strip():
+        df = df[df["Corridas"].fillna("").str.contains(f_corrida.strip(), case=False, na=False)]
+
+    m1, m2 = st.columns(2)
     m1.metric("Certificados encontrados", len(df))
     m2.metric("Com Ensaio", int((df["Tipo"] == "Com Ensaio").sum()))
 
