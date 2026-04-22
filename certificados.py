@@ -937,14 +937,26 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     AZUL = colors.HexColor("#1F3864")
     CINZA = colors.HexColor("#D9D9D9")
 
-    def ph(t, **kw): return Paragraph(t, PS("h", fontSize=8,
-        fontName="Helvetica-Bold", alignment=TA_CENTER, **kw))
-    def pc(t, **kw): return Paragraph(str(t or ""), PS("c", fontSize=8,
-        fontName="Helvetica", alignment=TA_CENTER, **kw))
-    def pl(t, **kw): return Paragraph(str(t or ""), PS("l", fontSize=8,
-        fontName="Helvetica", alignment=TA_LEFT, **kw))
-    def pb(t, **kw): return Paragraph(str(t or ""), PS("b", fontSize=8,
-        fontName="Helvetica-Bold", alignment=TA_LEFT, **kw))
+    def ph(t, **kw):
+        kw.setdefault("fontSize", 8)
+        kw.setdefault("fontName", "Helvetica-Bold")
+        kw.setdefault("alignment", TA_CENTER)
+        return Paragraph(t, PS("h", **kw))
+    def pc(t, **kw):
+        kw.setdefault("fontSize", 8)
+        kw.setdefault("fontName", "Helvetica")
+        kw.setdefault("alignment", TA_CENTER)
+        return Paragraph(str(t or ""), PS("c", **kw))
+    def pl(t, **kw):
+        kw.setdefault("fontSize", 8)
+        kw.setdefault("fontName", "Helvetica")
+        kw.setdefault("alignment", TA_LEFT)
+        return Paragraph(str(t or ""), PS("l", **kw))
+    def pb(t, **kw):
+        kw.setdefault("fontSize", 8)
+        kw.setdefault("fontName", "Helvetica-Bold")
+        kw.setdefault("alignment", TA_LEFT)
+        return Paragraph(str(t or ""), PS("b", **kw))
 
     story = []
 
