@@ -710,7 +710,7 @@ def tela_consulta_certificados():
             # Busca dados completos
             with engine.connect() as conn:
                 corridas_db = conn.execute(text("""
-                    SELECT numero_of, numero_corrida, "C","Si","Mn","P","S","Cr","Ni","Mo"
+                    SELECT numero_of, numero_corrida, c, si, mn, p, s, cr, ni, mo
                     FROM certificado_corrida WHERE certificado_id=:id ORDER BY criado_em
                 """), {"id": cert_id}).fetchall()
 
@@ -733,6 +733,9 @@ def tela_consulta_certificados():
                 st.markdown("**Composição Química:**")
                 df_comp = pd.DataFrame(corridas_db,
                     columns=["OF","Corrida","C","Si","Mn","P","S","Cr","Ni","Mo"])
+                # Formata valores numericos
+                for _ec in ["C","Si","Mn","P","S","Cr","Ni","Mo"]:
+                    df_comp[_ec] = pd.to_numeric(df_comp[_ec], errors="coerce").round(4)
                 st.dataframe(df_comp, use_container_width=True, hide_index=True)
 
             if itens_db:
