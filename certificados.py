@@ -681,11 +681,7 @@ def tela_consulta_certificados():
         df = df[df["Corridas"].str.contains(f_corrida.strip(), case=False, na=False)]
 
     m1, m2 = st.columns(2)
-    m1.metric("Certificados encontrados", len(df))
-    m2.metric("Tipos", df["Tipo"].value_counts().to_dict())
-
-    st.caption("💡 **Clique em uma linha** para ver detalhes e gerar o certificado.")
-    df_exib = df.drop(columns=["id"])
+    # Normaliza tipo antes de qualquer operacao
     def _norm_tipo(v):
         if v is None: return "Sem Ensaio"
         if isinstance(v, dict):
@@ -693,7 +689,13 @@ def tela_consulta_certificados():
         s = str(v)
         if "com_ensaio" in s: return "Com Ensaio"
         return "Sem Ensaio"
-    df_exib["Tipo"] = df_exib["Tipo"].apply(_norm_tipo)
+    df["Tipo"] = df["Tipo"].apply(_norm_tipo)
+
+    m1.metric("Certificados encontrados", len(df))
+    m2.metric("Com Ensaio", int((df["Tipo"] == "Com Ensaio").sum()))
+
+    st.caption("💡 **Clique em uma linha** para ver detalhes e gerar o certificado.")
+    df_exib = df.drop(columns=["id"])
 
     evento = st.dataframe(df_exib, use_container_width=True, hide_index=True,
                            on_select="rerun", selection_mode="single-row")
