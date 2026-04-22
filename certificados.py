@@ -548,7 +548,7 @@ def tela_novo_certificado():
                     "liga": liga.strip(), "proj": projeto.strip(),
                     "data": data_emissao, "nf": nota_fiscal.strip(),
                     "obs": obs.strip(), "outros": outros.strip(),
-                    "tipo": tipo, "now": now
+                    "tipo": str(tipo) if not isinstance(tipo, dict) else ("com_ensaio" if tipo.get("com_ensaio") else "sem_ensaio"), "now": now
                 })
 
                 # Insere corridas — colunas em minusculas no PostgreSQL
@@ -682,10 +682,12 @@ def tela_consulta_certificados():
 
     st.caption("💡 **Clique em uma linha** para ver detalhes e gerar o certificado.")
     df_exib = df.drop(columns=["id"])
-    df_exib["Tipo"] = df_exib["Tipo"].map({
-        "sem_ensaio": "Sem Ensaio",
-        "com_ensaio": "Com Ensaio"
-    })
+    # Normaliza tipo_template que pode ser string ou dict
+    def _norm_tipo(v):
+        if isinstance(v, dict):
+            return "Com Ensaio" if v.get("com_ensaio") else "Sem Ensaio"
+        return {"sem_ensaio": "Sem Ensaio", "com_ensaio": "Com Ensaio"}.get(str(v), str(v))
+    df_exib["Tipo"] = df_exib["Tipo"].apply(_norm_tipo)
 
     evento = st.dataframe(df_exib, use_container_width=True, hide_index=True,
                            on_select="rerun", selection_mode="single-row")
