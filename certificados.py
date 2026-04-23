@@ -971,20 +971,50 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     outros   = cert_data.get("outros_ensaios","")
     tipo     = cert_data.get("tipo_template","sem_ensaio")
 
+    # Formata data
+    if data_em:
+        try:
+            from datetime import datetime as _dt
+            if hasattr(data_em, 'strftime'):
+                data_em_fmt = data_em.strftime("%d/%m/%Y")
+            else:
+                _d = _dt.strptime(str(data_em), "%Y-%m-%d")
+                data_em_fmt = _d.strftime("%d/%m/%Y")
+        except Exception:
+            data_em_fmt = str(data_em)
+    else:
+        data_em_fmt = ""
+
+    # Busca logo do certificado ou logo ativo
+    _logo_cell = pl("")
+    try:
+        from empresa_config import get_config as _gc
+        import base64 as _b64logo, io as _io_logo
+        _logo_b64 = (_gc("logo_certificado_base64","") or
+                     _gc("logo1_base64","") or
+                     _gc("logo2_base64",""))
+        if _logo_b64:
+            _logo_bytes = _b64logo.b64decode(_logo_b64)
+            _logo_cell = RLImage(_io_logo.BytesIO(_logo_bytes),
+                                 width=38*mm, height=20*mm)
+    except Exception:
+        pass
+
     # Logo e titulo
     cab = Table([[
-        pl(""),  # Logo placeholder
-        [ph("Certificado de Qualidade / Quality Certificate", fontSize=11),
-         ph(f"Nº {num_cert}", fontSize=14)],
+        _logo_cell,
+        [ph("Certificado de Qualidade / Quality Certificate", fontSize=10),
+         ph(f"Nº {num_cert}", fontSize=13)],
         [ph("INSPECTION\nCERTIFICATE", fontSize=9),
          ph("SFS - EM 10204 - 3.1", fontSize=8)],
-    ]], colWidths=[40*mm, W*0.55, W*0.3])
+    ]], colWidths=[42*mm, W*0.52, W*0.28], rowHeights=[26*mm])
     cab.setStyle(TableStyle([
-        ("BOX",         (0,0),(-1,-1), 0.8, BK),
-        ("LINEBEFORE",  (1,0),(1,0),   0.8, BK),
-        ("LINEBEFORE",  (2,0),(2,0),   0.8, BK),
-        ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
-        ("TOPPADDING",  (0,0),(-1,-1), 4),
+        ("BOX",          (0,0),(-1,-1), 0.8, BK),
+        ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
+        ("LINEBEFORE",   (2,0),(2,0),   0.8, BK),
+        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",        (0,0),(0,0),   "CENTER"),
+        ("TOPPADDING",   (0,0),(-1,-1), 4),
         ("BOTTOMPADDING",(0,0),(-1,-1), 4),
     ]))
     story.append(cab)
@@ -1001,11 +1031,12 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     story.append(cli_tbl)
 
     # Norma/Liga/Projeto
+    _norma_texto = norma if norma else f"{liga}" if liga else ""
     norma_tbl = Table([[
         pb("NORMA DA LIGA/ ALLOY STANDARD"), pl(""),
         pb("PROJETO / PROJECT"), pl(cert_data.get("projeto",""))
     ],[
-        ph(f"{norma}", fontSize=12), "", "", ""
+        ph(f"{_norma_texto}", fontSize=12), "", "", ""
     ]], colWidths=[W*0.3, W*0.2, W*0.2, W*0.3])
     norma_tbl.setStyle(TableStyle([
         ("BOX",(0,0),(-1,-1),0.5,BK),
@@ -1025,14 +1056,28 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     comp_header = [ph("OF"), ph("CORRIDA\nHEAT Nº")] + [ph(e) for e in ELEM_COLS]
     comp_rows = [comp_header]
     for corr in corridas:
-        row = [pc(corr[1] if hasattr(corr,'__getitem__') else corr._mapping.get("numero_of","")),
-               pc(corr[2] if hasattr(corr,'__getitem__') else corr._mapping.get("numero_corrida",""))]
-        for j, el in enumerate(ELEM_COLS):
-            val = corr[j+2] if hasattr(corr,'__getitem__') else 0
-            row.append(pc(f"{float(val or 0):.3f}".replace(".",",")))
+        _cm = corr._mapping if hasattr(corr, "_mapping") else {}
+        _nof   = _cm.get("numero_of","") or ""
+        _ncorr = _cm.get("numero_corrida","") or ""
+        if not _nof and hasattr(corr, "__getitem__"):
+            _nof   = str(corr[0] or "")
+            _ncorr = str(corr[1] or "")
+        row = [pc(_nof), pc(_ncorr)]
+        _elem_keys = ["c","si","mn","p","s","cr","ni","mo"]
+        for ek in _elem_keys:
+            val = _cm.get(ek, 0) or 0
+            if val == 0 and hasattr(corr, "__getitem__"):
+                idx_ek = _elem_keys.index(ek)
+                try: val = float(corr[idx_ek+2] or 0)
+                except Exception: val = 0
+            row.append(pc(f"{float(val):.4f}".replace(".",",")))
         comp_rows.append(row)
 
-    cw_comp = [20*mm, 20*mm] + [W/10]*8
+    # Linhas vazias ate completar 8
+    while len(comp_rows) < 9:
+        comp_rows.append(["","","","","","","","","",""])
+
+    cw_comp = [20*mm, 22*mm] + [(W-42*mm)/8]*8
     comp_tbl = Table(comp_rows, colWidths=cw_comp)
     comp_tbl.setStyle(TableStyle([
         ("BACKGROUND",(0,0),(-1,0),CINZA),
@@ -1156,7 +1201,10 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         pl(f"Nota Fiscal Nº : {nf}"),
         pl(""),
     ],[
-        pl(f"Data / Date : {data_em}"),
+        pl("BILL :"),
+        pl(""),
+    ],[
+        pl(f"Data / Date : {data_em_fmt}"),
         ph("CONTROLE DE QUALIDADE"),
     ]], colWidths=[W*0.5, W*0.5])
     rodape.setStyle(TableStyle([
