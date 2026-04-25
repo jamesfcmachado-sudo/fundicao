@@ -1018,10 +1018,10 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     story.append(cli_tbl)
 
     # ── NORMA / LIGA ──────────────────────────────────────────────────────────
-    _norma_txt = norma if norma else liga
+    _norma_txt = str(norma or liga or "")
     norma_tbl = Table([
         [pl("NORMA DA LIGA/ ALLOY STANDARD", bold=True), pl(""),
-         pl("PROJETO / PROJECT", bold=True), pl(projeto)],
+         pl("PROJETO / PROJECT", bold=True), pl(str(projeto or ""))],
         [ph(f"{_norma_txt}", sz=13), "", "", ""],
     ], colWidths=[W*0.35, W*0.15, W*0.2, W*0.3])
     norma_tbl.setStyle(TableStyle([

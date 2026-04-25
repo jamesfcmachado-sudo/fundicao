@@ -234,6 +234,50 @@ def tela_configuracoes_empresa() -> None:
             set_config("logo_ativo", novo_ativo)
             st.success(f"✅ Logotipo {novo_ativo[-1]} definido como ativo!")
 
+
+    with tab2:
+        # Adiciona logo do certificado no final da aba de logotipos
+        st.divider()
+        st.markdown("#### 🏅 Logotipo do Certificado de Qualidade")
+        st.caption("Logo usado no PDF do Certificado. Se não configurado, usa o logotipo ativo.")
+
+        _logo_cert_b64 = get_config("logo_certificado_base64", "")
+        _logo_cert_nome = get_config("logo_certificado_nome", "")
+        if _logo_cert_b64:
+            import base64 as _b64lc2
+            _lc_bytes2 = _b64lc2.b64decode(_logo_cert_b64)
+            st.image(_lc_bytes2, width=200)
+            st.success(f"✅ Logo certificado: **{_logo_cert_nome}**")
+            _dlc1, _dlc2 = st.columns(2)
+            with _dlc1:
+                st.download_button(
+                    "⬇️ Baixar logo certificado",
+                    data=_lc_bytes2,
+                    file_name=_logo_cert_nome,
+                    mime="image/png",
+                    key="dl_logo_cert2"
+                )
+            with _dlc2:
+                if st.button("🗑️ Remover logo certificado", key="btn_rm_logo_cert2"):
+                    set_config("logo_certificado_base64", "")
+                    set_config("logo_certificado_nome", "")
+                    st.rerun()
+        else:
+            st.info("Nenhum logo específico. Usando logo ativo da empresa.")
+
+        _up_logo_cert2 = st.file_uploader(
+            "📤 Carregar logo do Certificado (.png, .jpg)",
+            type=["png","jpg","jpeg"],
+            key="upload_logo_cert2"
+        )
+        if _up_logo_cert2:
+            import base64 as _b64ulc2
+            _b64lc_new2 = _b64ulc2.b64encode(_up_logo_cert2.read()).decode()
+            set_config("logo_certificado_base64", _b64lc_new2)
+            set_config("logo_certificado_nome", _up_logo_cert2.name)
+            st.success(f"✅ Logo certificado salvo: {_up_logo_cert2.name}")
+            st.rerun()
+
     # ── ABA 3: Numeração e Siglas ─────────────────────────────────────────────
     with tab3:
         st.subheader("Formatos de numeração e siglas")
@@ -457,6 +501,129 @@ def tela_configuracoes_empresa() -> None:
                 st.success(f"✅ Logo certificado salvo: {_up_logo_cert.name}")
                 st.rerun()
 
+            st.divider()
+
+            _cert_tmpl_b64 = get_config("template_cert_base64", "")
+            _cert_tmpl_nome = get_config("template_cert_nome", "")
+            if _cert_tmpl_b64:
+                st.success(f"✅ Template atual: **{_cert_tmpl_nome}**")
+                _dl3, _dl4 = st.columns(2)
+                with _dl3:
+                    import base64 as _b64mod2
+                    st.download_button(
+                        "⬇️ Baixar template Certificado atual",
+                        data=_b64mod2.b64decode(_cert_tmpl_b64),
+                        file_name=_cert_tmpl_nome,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="dl_tmpl_cert"
+                    )
+                with _dl4:
+                    if st.button("🗑️ Remover template Certificado", key="btn_rm_tmpl_cert"):
+                        set_config("template_cert_base64", "")
+                        set_config("template_cert_nome", "")
+                        st.rerun()
+            else:
+                st.info("Nenhum template de Certificado cadastrado.")
+
+            _up_cert = st.file_uploader(
+                "📤 Carregar novo template de Certificado (.xlsx)",
+                type=["xlsx"],
+                key="upload_tmpl_cert"
+            )
+            if _up_cert:
+                import base64
+                _b64 = base64.b64encode(_up_cert.read()).decode()
+                set_config("template_cert_base64", _b64)
+                set_config("template_cert_nome", _up_cert.name)
+                st.success(f"✅ Template Certificado salvo: {_up_cert.name}")
+                st.rerun()
+
+        # ── TEMPLATES PERSONALIZADOS ──────────────────────────────────────────
+        with st.container(border=True):
+            st.markdown("#### ➕ Templates Personalizados")
+            st.caption("Cadastre templates extras para futuras funcionalidades do sistema.")
+
+            # Carrega lista de templates personalizados
+            import json as _json
+            try:
+                _tmpls_custom = _json.loads(get_config("templates_custom", "[]"))
+            except Exception:
+                _tmpls_custom = []
+
+            # Lista templates existentes
+            if _tmpls_custom:
+                st.markdown("**Templates cadastrados:**")
+                for _idx_t, _tmpl in enumerate(_tmpls_custom):
+                    with st.container(border=True):
+                        _tc1, _tc2, _tc3 = st.columns([3,1,1])
+                        with _tc1:
+                            st.markdown(f"**{_tmpl.get('nome','Sem nome')}**")
+                            st.caption(f"Responsável: {_tmpl.get('responsavel','—')} | Orientação: {_tmpl.get('orientacao','Retrato')}")
+                        with _tc2:
+                            if _tmpl.get("base64"):
+                                import base64 as _b64m
+                                st.download_button(
+                                    "⬇️ Baixar",
+                                    data=_b64m.b64decode(_tmpl["base64"]),
+                                    file_name=_tmpl.get("arquivo","template.xlsx"),
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    key=f"dl_custom_{_idx_t}"
+                                )
+                        with _tc3:
+                            if st.button("🗑️ Remover", key=f"rm_custom_{_idx_t}"):
+                                _tmpls_custom.pop(_idx_t)
+                                set_config("templates_custom", _json.dumps(_tmpls_custom))
+                                st.rerun()
+
+                st.divider()
+
+            # Formulario para novo template
+            st.markdown("**Adicionar novo template:**")
+            _nc1, _nc2 = st.columns(2)
+            with _nc1:
+                _novo_nome = st.text_input(
+                    "Nome do template *",
+                    placeholder="Ex: Ficha de Inspeção, Ordem de Compra...",
+                    key="novo_tmpl_nome"
+                )
+                _novo_resp = st.text_input(
+                    "👤 Responsável",
+                    value=get_config("contato",""),
+                    key="novo_tmpl_resp"
+                )
+            with _nc2:
+                _novo_orient = st.radio(
+                    "📐 Orientação",
+                    options=["Retrato", "Paisagem"],
+                    horizontal=True,
+                    key="novo_tmpl_orient"
+                )
+
+            _novo_arquivo = st.file_uploader(
+                "📤 Carregar template (.xlsx)",
+                type=["xlsx"],
+                key="upload_tmpl_custom"
+            )
+
+            if st.button("✅ Adicionar template", key="btn_add_custom", type="primary"):
+                if not _novo_nome.strip():
+                    st.error("Informe o nome do template.")
+                elif not _novo_arquivo:
+                    st.error("Selecione o arquivo .xlsx do template.")
+                else:
+                    import base64
+                    _b64_new = base64.b64encode(_novo_arquivo.read()).decode()
+                    _novo_tmpl = {
+                        "nome":        _novo_nome.strip(),
+                        "responsavel": _novo_resp.strip(),
+                        "orientacao":  _novo_orient,
+                        "arquivo":     _novo_arquivo.name,
+                        "base64":      _b64_new,
+                    }
+                    _tmpls_custom.append(_novo_tmpl)
+                    set_config("templates_custom", _json.dumps(_tmpls_custom))
+                    st.success(f"✅ Template '{_novo_nome}' adicionado!")
+                    st.rerun()
             st.divider()
 
             _cert_tmpl_b64 = get_config("template_cert_base64", "")
