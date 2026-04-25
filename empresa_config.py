@@ -507,28 +507,28 @@ def tela_configuracoes_empresa() -> None:
                 _novo_nome = st.text_input(
                     "Nome do template *",
                     placeholder="Ex: Ficha de Inspeção, Ordem de Compra...",
-                    key="novo_tmpl_nome"
+                    key="novo_tmpl_custom_nome"
                 )
                 _novo_resp = st.text_input(
                     "👤 Responsável",
                     value=get_config("contato",""),
-                    key="novo_tmpl_resp"
+                    key="novo_tmpl_custom_resp"
                 )
             with _nc2:
                 _novo_orient = st.radio(
                     "📐 Orientação",
                     options=["Retrato", "Paisagem"],
                     horizontal=True,
-                    key="novo_tmpl_orient"
+                    key="novo_tmpl_custom_orient"
                 )
 
             _novo_arquivo = st.file_uploader(
                 "📤 Carregar template (.xlsx)",
                 type=["xlsx"],
-                key="upload_tmpl_custom"
+                key="upload_tmpl_custom_file"
             )
 
-            if st.button("✅ Adicionar template", key="btn_add_custom", type="primary"):
+            if st.button("✅ Adicionar template", key="btn_add_custom_tmpl", type="primary"):
                 if not _novo_nome.strip():
                     st.error("Informe o nome do template.")
                 elif not _novo_arquivo:
