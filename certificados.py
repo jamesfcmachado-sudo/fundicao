@@ -914,309 +914,302 @@ def tela_ensaios_mecanicos():
 # ── Geração de PDF do Certificado ─────────────────────────────────────────────
 def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     """Gera PDF do certificado fiel ao template."""
+    import io as _io_pdf
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import mm
     from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
-        Paragraph, Spacer, HRFlowable)
+        Paragraph, Spacer, Image as RLImage)
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
-    buf = io.BytesIO()
+    buf = _io_pdf.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
-        leftMargin=12*mm, rightMargin=12*mm,
-        topMargin=10*mm, bottomMargin=10*mm)
+        leftMargin=10*mm, rightMargin=10*mm,
+        topMargin=8*mm, bottomMargin=8*mm)
 
-    W = A4[0] - 24*mm
+    W = A4[0] - 20*mm
     styles = getSampleStyleSheet()
+    BK = colors.black
+    CINZA = colors.HexColor("#D9D9D9")
 
     def PS(name, **kw):
         return ParagraphStyle(name, parent=styles["Normal"], **kw)
 
-    BK = colors.black
-    AZUL = colors.HexColor("#1F3864")
-    CINZA = colors.HexColor("#D9D9D9")
-
-    def ph(t, **kw):
-        kw.setdefault("fontSize", 8)
-        kw.setdefault("fontName", "Helvetica-Bold")
-        kw.setdefault("alignment", TA_CENTER)
-        return Paragraph(t, PS("h", **kw))
-    def pc(t, **kw):
-        kw.setdefault("fontSize", 8)
-        kw.setdefault("fontName", "Helvetica")
-        kw.setdefault("alignment", TA_CENTER)
-        return Paragraph(str(t or ""), PS("c", **kw))
-    def pl(t, **kw):
-        kw.setdefault("fontSize", 8)
-        kw.setdefault("fontName", "Helvetica")
-        kw.setdefault("alignment", TA_LEFT)
-        return Paragraph(str(t or ""), PS("l", **kw))
-    def pb(t, **kw):
-        kw.setdefault("fontSize", 8)
-        kw.setdefault("fontName", "Helvetica-Bold")
-        kw.setdefault("alignment", TA_LEFT)
-        return Paragraph(str(t or ""), PS("b", **kw))
+    def ph(t, sz=8, bold=True):
+        fn = "Helvetica-Bold" if bold else "Helvetica"
+        return Paragraph(str(t or ""), PS("h", fontSize=sz,
+            fontName=fn, alignment=TA_CENTER, leading=sz+2))
+    def pc(t, sz=8):
+        return Paragraph(str(t or ""), PS("c", fontSize=sz,
+            fontName="Helvetica", alignment=TA_CENTER, leading=sz+2))
+    def pl(t, sz=8, bold=False):
+        fn = "Helvetica-Bold" if bold else "Helvetica"
+        return Paragraph(str(t or ""), PS("l", fontSize=sz,
+            fontName=fn, alignment=TA_LEFT, leading=sz+2))
 
     story = []
 
-    # ── Cabecalho ─────────────────────────────────────────────────────────────
-    num_cert = cert_data.get("numero_cert","")
-    cliente  = cert_data.get("cliente","")
-    norma    = cert_data.get("norma","")
-    liga     = cert_data.get("liga","")
-    data_em  = cert_data.get("data_emissao","")
-    nf       = cert_data.get("nota_fiscal","")
-    obs      = cert_data.get("observacoes","")
-    outros   = cert_data.get("outros_ensaios","")
-    tipo     = cert_data.get("tipo_template","sem_ensaio")
+    # Dados do certificado
+    num_cert = cert_data.get("numero_cert", "")
+    cliente  = cert_data.get("cliente", "")
+    norma    = cert_data.get("norma", "")
+    liga     = cert_data.get("liga", "")
+    projeto  = cert_data.get("projeto", "")
+    data_em  = cert_data.get("data_emissao", "")
+    nf       = cert_data.get("nota_fiscal", "")
+    obs      = cert_data.get("observacoes", "")
+    outros   = cert_data.get("outros_ensaios", "")
+    tipo     = str(cert_data.get("tipo_template", "sem_ensaio"))
 
     # Formata data
-    if data_em:
-        try:
-            from datetime import datetime as _dt
-            if hasattr(data_em, 'strftime'):
-                data_em_fmt = data_em.strftime("%d/%m/%Y")
-            else:
-                _d = _dt.strptime(str(data_em), "%Y-%m-%d")
-                data_em_fmt = _d.strftime("%d/%m/%Y")
-        except Exception:
-            data_em_fmt = str(data_em)
-    else:
-        data_em_fmt = ""
+    try:
+        from datetime import datetime as _dtt
+        if hasattr(data_em, "strftime"):
+            data_fmt = data_em.strftime("%d/%m/%Y")
+        else:
+            data_fmt = _dtt.strptime(str(data_em), "%Y-%m-%d").strftime("%d/%m/%Y")
+    except Exception:
+        data_fmt = str(data_em or "")
 
-    # Busca logo do certificado ou logo ativo
+    # Logo
     _logo_cell = pl("")
     try:
         from empresa_config import get_config as _gc
-        import base64 as _b64logo, io as _io_logo
-        _logo_b64 = (_gc("logo_certificado_base64","") or
-                     _gc("logo1_base64","") or
-                     _gc("logo2_base64",""))
-        if _logo_b64:
-            _logo_bytes = _b64logo.b64decode(_logo_b64)
-            _logo_cell = RLImage(_io_logo.BytesIO(_logo_bytes),
+        import base64 as _b64l
+        _lb = (_gc("logo_certificado_base64","") or
+               _gc("logo1_base64","") or _gc("logo2_base64",""))
+        if _lb:
+            _logo_cell = RLImage(_io_pdf.BytesIO(_b64l.b64decode(_lb)),
                                  width=38*mm, height=20*mm)
     except Exception:
         pass
 
-    # Logo e titulo
+    # ── CABECALHO ────────────────────────────────────────────────────────────
     cab = Table([[
         _logo_cell,
-        [ph("Certificado de Qualidade / Quality Certificate", fontSize=10),
-         ph(f"Nº {num_cert}", fontSize=13)],
-        [ph("INSPECTION\nCERTIFICATE", fontSize=9),
-         ph("SFS - EM 10204 - 3.1", fontSize=8)],
+        [ph("Certificado de Qualidade / Quality Certificate", sz=10),
+         ph(f"Nº {num_cert}", sz=13)],
+        [ph("INSPECTION\nCERTIFICATE", sz=9),
+         ph("SFS - EM 10204 - 3.1", sz=8, bold=False)],
     ]], colWidths=[42*mm, W*0.52, W*0.28], rowHeights=[26*mm])
     cab.setStyle(TableStyle([
-        ("BOX",          (0,0),(-1,-1), 0.8, BK),
-        ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
-        ("LINEBEFORE",   (2,0),(2,0),   0.8, BK),
-        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
-        ("ALIGN",        (0,0),(0,0),   "CENTER"),
-        ("TOPPADDING",   (0,0),(-1,-1), 4),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 4),
+        ("BOX",         (0,0),(-1,-1), 0.8, BK),
+        ("LINEBEFORE",  (1,0),(1,0),   0.8, BK),
+        ("LINEBEFORE",  (2,0),(2,0),   0.8, BK),
+        ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",       (0,0),(0,0),   "CENTER"),
+        ("TOPPADDING",  (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
     ]))
     story.append(cab)
 
-    # Cliente
-    cli_tbl = Table([[pb("CLIENTE / CUSTOMER:"), pl(cliente.upper())]],
-                     colWidths=[45*mm, W-45*mm])
+    # ── CLIENTE ───────────────────────────────────────────────────────────────
+    cli_tbl = Table([
+        [pl("CLIENTE / CUSTOMER:", bold=True),
+         pl(cliente.upper(), bold=True, sz=9)],
+    ], colWidths=[45*mm, W-45*mm])
     cli_tbl.setStyle(TableStyle([
-        ("BOX",(0,0),(-1,-1),0.5,BK),
-        ("LEFTPADDING",(0,0),(-1,-1),4),
-        ("TOPPADDING",(0,0),(-1,-1),3),
-        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+        ("BOX",         (0,0),(-1,-1), 0.5, BK),
+        ("LEFTPADDING", (0,0),(-1,-1), 4),
+        ("TOPPADDING",  (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
     ]))
     story.append(cli_tbl)
 
-    # Norma/Liga/Projeto
-    _norma_texto = norma if norma else f"{liga}" if liga else ""
-    norma_tbl = Table([[
-        pb("NORMA DA LIGA/ ALLOY STANDARD"), pl(""),
-        pb("PROJETO / PROJECT"), pl(cert_data.get("projeto",""))
-    ],[
-        ph(f"{_norma_texto}", fontSize=12), "", "", ""
-    ]], colWidths=[W*0.3, W*0.2, W*0.2, W*0.3])
+    # ── NORMA / LIGA ──────────────────────────────────────────────────────────
+    _norma_txt = norma if norma else liga
+    norma_tbl = Table([
+        [pl("NORMA DA LIGA/ ALLOY STANDARD", bold=True), pl(""),
+         pl("PROJETO / PROJECT", bold=True), pl(projeto)],
+        [ph(f"{_norma_txt}", sz=13), "", "", ""],
+    ], colWidths=[W*0.35, W*0.15, W*0.2, W*0.3])
     norma_tbl.setStyle(TableStyle([
-        ("BOX",(0,0),(-1,-1),0.5,BK),
-        ("SPAN",(0,1),(3,1)),
-        ("ALIGN",(0,1),(3,1),"CENTER"),
-        ("FONTNAME",(0,1),(3,1),"Helvetica-Bold"),
-        ("FONTSIZE",(0,1),(3,1),14),
-        ("LEFTPADDING",(0,0),(-1,-1),4),
-        ("TOPPADDING",(0,0),(-1,-1),2),
-        ("BOTTOMPADDING",(0,0),(-1,-1),2),
+        ("BOX",         (0,0),(-1,-1), 0.5, BK),
+        ("SPAN",        (0,1),(3,1)),
+        ("ALIGN",       (0,1),(3,1), "CENTER"),
+        ("LEFTPADDING", (0,0),(-1,-1), 4),
+        ("TOPPADDING",  (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
     ]))
     story.append(norma_tbl)
+    story.append(Spacer(1, 2*mm))
 
-    # ── Composição Química ────────────────────────────────────────────────────
-    story.append(Spacer(1,2*mm))
-    ELEM_COLS = ["C","Si","Mn","P","S","Cr","Ni","Mo"]
-    comp_header = [ph("OF"), ph("CORRIDA\nHEAT Nº")] + [ph(e) for e in ELEM_COLS]
-    comp_rows = [comp_header]
+    # ── COMPOSIÇÃO QUÍMICA ────────────────────────────────────────────────────
+    ELEM = ["C","Si","Mn","P","S","Cr","Ni","Mo"]
+    comp_hdr = [ph("OF"), ph("CORRIDA\nHEAT Nº")] + [ph(e) for e in ELEM]
+    comp_rows = [comp_hdr]
+
     for corr in corridas:
         _cm = corr._mapping if hasattr(corr, "_mapping") else {}
-        _nof   = _cm.get("numero_of","") or ""
-        _ncorr = _cm.get("numero_corrida","") or ""
-        if not _nof and hasattr(corr, "__getitem__"):
-            _nof   = str(corr[0] or "")
-            _ncorr = str(corr[1] or "")
+        _nof   = str(_cm.get("numero_of","") or "")
+        _ncorr = str(_cm.get("numero_corrida","") or "")
         row = [pc(_nof), pc(_ncorr)]
-        _elem_keys = ["c","si","mn","p","s","cr","ni","mo"]
-        for ek in _elem_keys:
-            val = _cm.get(ek, 0) or 0
-            if val == 0 and hasattr(corr, "__getitem__"):
-                idx_ek = _elem_keys.index(ek)
-                try: val = float(corr[idx_ek+2] or 0)
-                except Exception: val = 0
-            row.append(pc(f"{float(val):.4f}".replace(".",",")))
+        for ek in ["c","si","mn","p","s","cr","ni","mo"]:
+            v = float(_cm.get(ek, 0) or 0)
+            row.append(pc(f"{v:.4f}".replace(".", ",")))
         comp_rows.append(row)
 
-    # Linhas vazias ate completar 8
+    # Linhas vazias
     while len(comp_rows) < 9:
-        comp_rows.append(["","","","","","","","","",""])
+        comp_rows.append([""] * 10)
 
-    cw_comp = [20*mm, 22*mm] + [(W-42*mm)/8]*8
-    comp_tbl = Table(comp_rows, colWidths=cw_comp)
+    cw_c = [20*mm, 22*mm] + [(W-42*mm)/8]*8
+    comp_tbl = Table(comp_rows, colWidths=cw_c)
     comp_tbl.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,0),CINZA),
-        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
-        ("GRID",(0,0),(-1,-1),0.4,BK),
-        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-        ("LEFTPADDING",(0,0),(-1,-1),2),
-        ("RIGHTPADDING",(0,0),(-1,-1),2),
-        ("TOPPADDING",(0,0),(-1,-1),2),
-        ("BOTTOMPADDING",(0,0),(-1,-1),2),
+        ("BACKGROUND",  (0,0),(-1,0), CINZA),
+        ("FONTNAME",    (0,0),(-1,0), "Helvetica-Bold"),
+        ("FONTSIZE",    (0,0),(-1,-1), 7),
+        ("GRID",        (0,0),(-1,-1), 0.4, BK),
+        ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",       (0,0),(-1,-1), "CENTER"),
+        ("TOPPADDING",  (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
     ]))
-    story.append(Table([[ph("I - COMPOSIÇÃO QUIMICA / CHEMICAL COMPOSITION")]],
-                        colWidths=[W]))
-    story.append(comp_tbl)
 
-    # ── Ensaios Mecânicos ─────────────────────────────────────────────────────
-    if tipo == "com_ensaio":
-        story.append(Spacer(1,2*mm))
-        ens_header = [ph("LIM. RES.\n(MPA)"), ph("LIM. ESC.\n(MPA)"),
-                      ph("ALONGAMENTO\n(%)"), ph("RED. ÁREA\n(%)"),
-                      ph("J1"), ph("J2"), ph("J3"), ph("TEMP.")]
-        ens_rows = [ens_header]
-        if ensaios:
-            for en in ensaios:
-                em = en._mapping if hasattr(en,'_mapping') else en
-                ens_rows.append([
-                    pc(f"{float(em.get('lim_resistencia',0) or 0):.1f}"),
-                    pc(f"{float(em.get('lim_escoamento',0) or 0):.1f}"),
-                    pc(f"{float(em.get('alongamento',0) or 0):.1f}"),
-                    pc(f"{float(em.get('red_area',0) or 0):.1f}"),
-                    pc(f"{float(em.get('impacto_j1',0) or 0):.1f}"),
-                    pc(f"{float(em.get('impacto_j2',0) or 0):.1f}"),
-                    pc(f"{float(em.get('impacto_j3',0) or 0):.1f}"),
-                    pc(f"{float(em.get('temperatura',0) or 0):.1f}"),
-                ])
-        else:
-            for _ in range(3):
-                ens_rows.append(["","","","","","","",""])
+    # Titulo composicao
+    tit_comp = Table([[ph("I - COMPOSIÇÃO QUIMICA / CHEMICAL COMPOSITION", sz=8)]],
+                     colWidths=[W])
+    tit_comp.setStyle(TableStyle([
+        ("BACKGROUND", (0,0),(-1,-1), CINZA),
+        ("BOX",        (0,0),(-1,-1), 0.5, BK),
+        ("TOPPADDING", (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+    ]))
+    story.append(tit_comp)
+    story.append(comp_tbl)
+    story.append(Spacer(1, 2*mm))
+
+    # ── ENSAIOS MECÂNICOS (só com_ensaio) ────────────────────────────────────
+    if "com_ensaio" in tipo and ensaios:
+        ens_hdr = [ph("LIM. RES.\n(MPa)"), ph("LIM. ESC.\n(MPa)"),
+                   ph("ALONG.\n(%)"), ph("RED. ÁREA\n(%)"),
+                   ph("J1"), ph("J2"), ph("J3"), ph("TEMP.")]
+        ens_rows = [ens_hdr]
+        for en in ensaios:
+            em = en._mapping if hasattr(en,"_mapping") else {}
+            ens_rows.append([
+                pc(f"{float(em.get('lim_resistencia',0) or 0):.1f}"),
+                pc(f"{float(em.get('lim_escoamento',0) or 0):.1f}"),
+                pc(f"{float(em.get('alongamento',0) or 0):.1f}"),
+                pc(f"{float(em.get('red_area',0) or 0):.1f}"),
+                pc(f"{float(em.get('impacto_j1',0) or 0):.1f}"),
+                pc(f"{float(em.get('impacto_j2',0) or 0):.1f}"),
+                pc(f"{float(em.get('impacto_j3',0) or 0):.1f}"),
+                pc(f"{float(em.get('temperatura',0) or 0):.1f}"),
+            ])
 
         ens_tbl = Table(ens_rows, colWidths=[W/8]*8)
         ens_tbl.setStyle(TableStyle([
-            ("BACKGROUND",(0,0),(-1,0),CINZA),
-            ("GRID",(0,0),(-1,-1),0.4,BK),
-            ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-            ("LEFTPADDING",(0,0),(-1,-1),2),
-            ("RIGHTPADDING",(0,0),(-1,-1),2),
-            ("TOPPADDING",(0,0),(-1,-1),2),
-            ("BOTTOMPADDING",(0,0),(-1,-1),2),
+            ("BACKGROUND", (0,0),(-1,0), CINZA),
+            ("GRID",       (0,0),(-1,-1), 0.4, BK),
+            ("FONTSIZE",   (0,0),(-1,-1), 7),
+            ("ALIGN",      (0,0),(-1,-1), "CENTER"),
+            ("VALIGN",     (0,0),(-1,-1), "MIDDLE"),
+            ("TOPPADDING", (0,0),(-1,-1), 2),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 2),
         ]))
-        story.append(Table([[ph("II - PROPRIEDADES MECÂNICAS / MECHANICAL PROPERTIES")]],
-                            colWidths=[W]))
+        tit_ens = Table([[ph("II - PROPRIEDADES MECÂNICAS / MECHANICAL PROPERTIES")]],
+                        colWidths=[W])
+        tit_ens.setStyle(TableStyle([
+            ("BACKGROUND", (0,0),(-1,-1), CINZA),
+            ("BOX",        (0,0),(-1,-1), 0.5, BK),
+        ]))
+        story.append(tit_ens)
         story.append(ens_tbl)
+        story.append(Spacer(1, 2*mm))
 
-    # ── Itens ─────────────────────────────────────────────────────────────────
-    story.append(Spacer(1,2*mm))
-    it_header = [ph("Pedido/Item\nP.O."), ph("Modelo\nPattern"),
-                 ph("Descrição\nDescription"), ph("Séries\nSeries"),
-                 ph("Quantidade\nQuantity")]
-    it_rows = [it_header]
+    # ── ITENS ────────────────────────────────────────────────────────────────
+    it_hdr = [ph("Pedido/Item\nP.O."), ph("Modelo\nPattern"),
+              ph("Descrição\nDescription"), ph("Séries\nSeries"),
+              ph("Quantidade\nQuantity")]
+    it_rows = [it_hdr]
     for it in itens:
-        im = it._mapping if hasattr(it,'_mapping') else it
+        im = it._mapping if hasattr(it,"_mapping") else it
         it_rows.append([
             pc(im.get("pedido","")), pc(im.get("modelo","")),
-            pl(im.get("descricao","")), pc(im.get("series","")),
+            pl(im.get("descricao","")),
+            pc(im.get("series","")),
             pc(str(im.get("quantidade",""))),
         ])
-    # Linhas vazias
-    for _ in range(max(0, 8-len(itens))):
+    while len(it_rows) < 9:
         it_rows.append(["","","","",""])
 
-    it_tbl = Table(it_rows, colWidths=[W*0.18, W*0.15, W*0.37, W*0.15, W*0.15])
+    it_tbl = Table(it_rows, colWidths=[W*0.20, W*0.14, W*0.37, W*0.15, W*0.14])
     it_tbl.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,0),CINZA),
-        ("GRID",(0,0),(-1,-1),0.4,BK),
-        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-        ("LEFTPADDING",(0,0),(-1,-1),3),
-        ("RIGHTPADDING",(0,0),(-1,-1),3),
-        ("TOPPADDING",(0,0),(-1,-1),2),
-        ("BOTTOMPADDING",(0,0),(-1,-1),2),
+        ("BACKGROUND",  (0,0),(-1,0), CINZA),
+        ("GRID",        (0,0),(-1,-1), 0.4, BK),
+        ("FONTSIZE",    (0,0),(-1,-1), 7),
+        ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",       (0,0),(1,-1), "CENTER"),
+        ("ALIGN",       (2,0),(2,-1), "LEFT"),
+        ("ALIGN",       (3,0),(-1,-1), "CENTER"),
+        ("TOPPADDING",  (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+        ("LEFTPADDING", (2,0),(2,-1), 3),
     ]))
-    story.append(Table([[ph("II - OUTROS DADOS / OTHER INFORMATIONS")]],
-                        colWidths=[W]))
+    tit_it = Table([[ph("II - OUTROS DADOS / OTHER INFORMATIONS")]],
+                   colWidths=[W])
+    tit_it.setStyle(TableStyle([
+        ("BACKGROUND", (0,0),(-1,-1), CINZA),
+        ("BOX",        (0,0),(-1,-1), 0.5, BK),
+    ]))
+    story.append(tit_it)
     story.append(it_tbl)
+    story.append(Spacer(1, 2*mm))
 
-    # ── Observações ───────────────────────────────────────────────────────────
-    story.append(Spacer(1,2*mm))
-    obs_tbl = Table([
-        [ph("III - OBSERVAÇÕES / COMMENTS")],
-        [pl(obs)],
-    ], colWidths=[W])
+    # ── OBSERVAÇÕES ───────────────────────────────────────────────────────────
+    obs_rows = [[ph("III - OBSERVAÇÕES / COMMENTS")]]
+    for _ in range(6):
+        obs_rows.append([pl("")])
+    obs_tbl = Table(obs_rows, colWidths=[W])
     obs_tbl.setStyle(TableStyle([
-        ("BOX",(0,0),(-1,-1),0.4,BK),
-        ("LINEBELOW",(0,0),(0,0),0.4,BK),
-        ("BACKGROUND",(0,0),(0,0),CINZA),
-        ("LEFTPADDING",(0,0),(-1,-1),4),
-        ("TOPPADDING",(0,0),(-1,-1),2),
-        ("BOTTOMPADDING",(0,0),(-1,-1),8),
+        ("BACKGROUND",  (0,0),(0,0), CINZA),
+        ("BOX",         (0,0),(-1,-1), 0.5, BK),
+        ("LINEBELOW",   (0,0),(0,0), 0.5, BK),
+        ("TOPPADDING",  (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
     ]))
+    if obs:
+        obs_rows[1] = [pl(f"  {obs}")]
     story.append(obs_tbl)
+    story.append(Spacer(1, 2*mm))
 
-    # ── Outros Ensaios ────────────────────────────────────────────────────────
-    outros_tbl = Table([
-        [ph("VI - OUTROS ENSAIOS / OTHER TESTS"),
-         ph("ANEXO\nATTACHED")],
-        [pl(outros), pl("")],
+    # ── OUTROS ENSAIOS ────────────────────────────────────────────────────────
+    out_tbl = Table([
+        [ph("VI - OUTROS ENSAIOS / OTHER TESTS"), ph("ANEXO\nATTACHED")],
+        [pl(outros or ""), pl("")],
+        [pl(""), pl("")],
     ], colWidths=[W*0.85, W*0.15])
-    outros_tbl.setStyle(TableStyle([
-        ("BOX",(0,0),(-1,-1),0.4,BK),
-        ("LINEBELOW",(0,0),(-1,0),0.4,BK),
-        ("LINEBEFORE",(1,0),(1,-1),0.4,BK),
-        ("BACKGROUND",(0,0),(-1,0),CINZA),
-        ("LEFTPADDING",(0,0),(-1,-1),4),
-        ("TOPPADDING",(0,0),(-1,-1),2),
-        ("BOTTOMPADDING",(0,0),(-1,-1),8),
+    out_tbl.setStyle(TableStyle([
+        ("BACKGROUND",  (0,0),(-1,0), CINZA),
+        ("BOX",         (0,0),(-1,-1), 0.5, BK),
+        ("LINEBEFORE",  (1,0),(1,-1), 0.5, BK),
+        ("LINEBELOW",   (0,0),(-1,0), 0.5, BK),
+        ("TOPPADDING",  (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 4),
+        ("LEFTPADDING", (0,0),(-1,-1), 4),
     ]))
-    story.append(outros_tbl)
+    story.append(out_tbl)
+    story.append(Spacer(1, 2*mm))
 
-    # ── Rodapé ────────────────────────────────────────────────────────────────
-    story.append(Spacer(1,3*mm))
-    rodape = Table([[
-        pl(f"Nota Fiscal Nº : {nf}"),
-        pl(""),
-    ],[
-        pl("BILL :"),
-        pl(""),
-    ],[
-        pl(f"Data / Date : {data_em_fmt}"),
-        ph("CONTROLE DE QUALIDADE"),
-    ]], colWidths=[W*0.5, W*0.5])
-    rodape.setStyle(TableStyle([
-        ("BOX",(0,0),(-1,-1),0.4,BK),
-        ("LINEABOVE",(0,1),(-1,1),0.4,BK),
-        ("LINEBEFORE",(1,0),(1,-1),0.4,BK),
-        ("LEFTPADDING",(0,0),(-1,-1),4),
-        ("TOPPADDING",(0,0),(-1,-1),3),
-        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+    # ── RODAPÉ ────────────────────────────────────────────────────────────────
+    rod_tbl = Table([
+        [pl(f"Nota Fiscal Nº : {nf or ''}"), pl("")],
+        [pl("BILL :"),                        pl("")],
+        [pl(f"Data / Date : {data_fmt}"),     ph("CONTROLE DE QUALIDADE")],
+    ], colWidths=[W*0.5, W*0.5])
+    rod_tbl.setStyle(TableStyle([
+        ("BOX",         (0,0),(-1,-1), 0.5, BK),
+        ("LINEABOVE",   (0,2),(-1,2), 0.5, BK),
+        ("LINEBEFORE",  (1,0),(1,-1), 0.5, BK),
+        ("LEFTPADDING", (0,0),(-1,-1), 4),
+        ("TOPPADDING",  (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
     ]))
-    story.append(rodape)
+    story.append(rod_tbl)
 
     doc.build(story)
     buf.seek(0)
     return buf.read()
+
