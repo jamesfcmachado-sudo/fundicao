@@ -1381,38 +1381,52 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     except Exception:
         pass
 
-    # Linha 1: Logo | INSPECTION CERTIFICATE
-    # Linha 2: "Certificado de Qualidade..." | (vazio, mesclado)
-    # Linha 3: "No XXXX/XX" | (vazio, mesclado)
+    # Cabecalho: 2 colunas, SEM SPAN
+    # Coluna esquerda: 3 linhas (logo | certificado | numero)
+    # Coluna direita: 1 celula alta com tabela interna (INSPECTION/CERTIFICATE/SFS)
+    # Assim as linhas horizontais atravessam toda a largura corretamente
+
+    _H_LOGO  = _H_LOGO_MAX   # 22mm - altura do logo
+    _H_TITULO = 6*mm          # altura do "Certificado de Qualidade"
+    _H_NUM    = 10*mm         # altura do "Nº XXXX/XX"
+    _H_TOTAL  = _H_LOGO + _H_TITULO + _H_NUM  # altura total do cabecalho
+
+    # Tabela interna para coluna direita (ocupa toda a altura)
+    _insp_tbl = Table([
+        [_ph_cab("INSPECTION",       sz=11)],
+        [_ph_cab("CERTIFICATE",      sz=11)],
+        [Spacer(1, 2*mm)],
+        [_ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False)],
+    ], colWidths=[_W_DIREITA - 2*mm],
+       rowHeights=[8*mm, 8*mm, 4*mm, 6*mm])
+    _insp_tbl.setStyle(TableStyle([
+        ("VALIGN",  (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",   (0,0),(-1,-1), "CENTER"),
+        ("TOPPADDING",   (0,0),(-1,-1), 1),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 1),
+    ]))
+
     cab = Table([
-        [_logo_cell,
-         [_ph_cab("INSPECTION", sz=11),
-          _ph_cab("CERTIFICATE", sz=11),
-          Spacer(1, 2*mm),
-          _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False)]],
-        [_ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
-         ""],
-        [_ph_cab(f"Nº {num_cert}", sz=16),
-         ""],
+        [_logo_cell,          _insp_tbl],
+        [_ph_cab("Certificado de Qualidade / Quality Certificate", sz=9), ""],
+        [_ph_cab(f"N\u00ba {num_cert}", sz=16), ""],
     ], colWidths=[_W_ESQUERDA, _W_DIREITA],
-       rowHeights=[_H_LOGO_MAX, 7*mm, 9*mm])
+       rowHeights=[_H_LOGO, _H_TITULO, _H_NUM])
 
     cab.setStyle(TableStyle([
-        # Borda externa completa
-        ("BOX",          (0,0),(-1,-1), 0.8, BK),
-        # Linha vertical separando coluna INSPECTION em todas as linhas
-        ("LINEBEFORE",   (1,0),(1,2),   0.8, BK),
-        # Coluna direita mescla as 3 linhas
-        ("SPAN",         (1,0),(1,2)),
-        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
-        ("VALIGN",       (1,0),(1,0),   "TOP"),
-        ("ALIGN",        (0,0),(-1,-1), "CENTER"),
-        ("TOPPADDING",   (0,0),(-1,-1), 2),
+        ("BOX",         (0,0),(-1,-1), 0.8, BK),
+        # Linha vertical separando coluna INSPECTION
+        ("LINEBEFORE",  (1,0),(1,0),   0.8, BK),
+        # Mescla coluna direita linhas 1 e 2 (titulo e numero ficam so na col esquerda)
+        ("SPAN",        (1,1),(1,2)),
+        ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",       (0,0),(-1,-1), "CENTER"),
+        ("TOPPADDING",  (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-        ("TOPPADDING",   (1,0),(1,0),   5),
-        # Linha horizontal completa (col 0 ate col 1) abaixo do "Certificado de Qualidade"
-        # separando logo/titulo do Nº do certificado
-        ("LINEBELOW",    (0,1),(-1,1),  0.5, BK),
+        # Linha horizontal atravessando TODA largura apos a linha do titulo (linha 1)
+        ("LINEBELOW",   (0,1),(-1,1),  0.5, BK),
+        # Fundo branco nas celulas vazias do span
+        ("BACKGROUND",  (1,1),(1,2),   colors.white),
     ]))
     story.append(cab)
 
