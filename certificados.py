@@ -1329,13 +1329,11 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         data_fmt = str(data_em or "")
 
     # ── CABECALHO ─────────────────────────────────────────────────────────────
-    # Layout IDENTICO ao template:
-    # +------------------------------------------+------------------+
-    # |  LOGO (esticado na largura toda)          | INSPECTION       |
-    # |  Certificado de Qualidade / Quality Cert  | CERTIFICATE      |
-    # |  Nº 2034/26                               | SFS-EM10204-3.1  |
-    # +------------------------------------------+------------------+
-    # Tudo numa unica celula esquerda com 3 elementos empilhados
+    # Layout identico ao template:
+    #   Col 0 (70mm): Logo grande ocupando toda a altura
+    #   Col 1 (82mm): "Certificado de Qualidade..." + "No XXXX/XX"
+    #   Col 2 (38mm): INSPECTION CERTIFICATE + SFS
+    # larguras definidas abaixo no bloco do cabecalho
 
     def _ph_cab(t, sz=8, bold=True):
         return Paragraph(str(t or ""), ParagraphStyle(
@@ -1343,65 +1341,77 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
             fontSize=sz,
             fontName="Helvetica-Bold" if bold else "Helvetica",
             alignment=TA_CENTER,
-            leading=sz * 1.3,
+            leading=sz * 1.4,
             wordWrap="LTR",
         ))
 
+    # ── CABECALHO: 2 colunas identico ao template ────────────────────────────
+    # Coluna E (larga): Logo em cima + "Certificado..." abaixo + "No XXXX/XX"
+    # Coluna D (estreita): INSPECTION / CERTIFICATE / SFS
     _W_ESQUERDA = W - 42*mm   # ~148mm
     _W_DIREITA  = 42*mm
-    _H_CAB      = 38*mm       # altura total do cabecalho
+    _H_LOGO_MAX = 22*mm       # altura maxima reservada para o logo
 
-    # Logo: esticado para ocupar TODA a largura da coluna esquerda
-    _logo_img = None
+    # Logo: calcula dimensoes respeitando proporcao original da imagem
+    _logo_cell = Paragraph("", ParagraphStyle("empty", parent=styles["Normal"]))
     try:
         from empresa_config import get_config as _gc
         import base64 as _b64l
+        from PIL import Image as _PILImg
         _lb = (_gc("logo_certificado_base64","") or
                _gc("logo1_base64","") or _gc("logo2_base64",""))
         if _lb:
             _img_bytes = _b64l.b64decode(_lb)
-            # Logo ocupa toda a largura disponivel, altura proporcional maxima 22mm
-            from PIL import Image as _PILImg
             _pil = _PILImg.open(_io_pdf.BytesIO(_img_bytes))
-            _iw, _ih = _pil.size
-            _logo_w = _W_ESQUERDA - 2*mm  # quase toda a largura
-            _logo_h = min(_logo_w * _ih / _iw, 22*mm)  # proporcional, max 22mm
-            _logo_img = RLImage(_io_pdf.BytesIO(_img_bytes),
-                                width=_logo_w, height=_logo_h)
+            _iw, _ih = _pil.size  # dimensoes originais em pixels
+            _proporcao = _iw / _ih
+            # Largura maxima disponivel = largura da coluna - 4mm padding
+            _logo_w = _W_ESQUERDA - 4*mm
+            _logo_h = _logo_w / _proporcao
+            # Se altura calculada exceder o maximo, limita pela altura
+            if _logo_h > _H_LOGO_MAX:
+                _logo_h = _H_LOGO_MAX
+                _logo_w = _logo_h * _proporcao
+                # Garante que nao ultrapasse a largura da coluna
+                if _logo_w > _W_ESQUERDA - 4*mm:
+                    _logo_w = _W_ESQUERDA - 4*mm
+                    _logo_h = _logo_w / _proporcao
+            _logo_cell = RLImage(_io_pdf.BytesIO(_img_bytes),
+                                 width=_logo_w, height=_logo_h)
     except Exception:
         pass
 
-    # Celula esquerda: logo + titulo + numero empilhados
-    _cel_esq = [
-        _logo_img if _logo_img else Paragraph("", styles["Normal"]),
-        Spacer(1, 1*mm),
-        _ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
-        _ph_cab(f"Nº {num_cert}", sz=15),
-    ]
-
-    # Celula direita: INSPECTION alinhado ao topo
-    _cel_dir = [
-        _ph_cab("INSPECTION", sz=11),
-        _ph_cab("CERTIFICATE", sz=11),
-        Spacer(1, 3*mm),
-        _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False),
-    ]
-
+    # Cabecalho: 3 linhas x 2 colunas
+    # Linha 0: Logo          | INSPECTION / CERTIFICATE / SFS (span 3 linhas)
+    # Linha 1: Certificado.. | (span)
+    # Linha 2: Nº XXXX/XX   | (span)
+    # Linha separadora entre linha 1 e linha 2 (acima do numero)
     cab = Table([
-        [_cel_esq, _cel_dir],
+        [_logo_cell,
+         [_ph_cab("INSPECTION", sz=11),
+          _ph_cab("CERTIFICATE", sz=11),
+          Spacer(1, 3*mm),
+          _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False)]],
+        [_ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
+         ""],
+        [_ph_cab(f"Nº {num_cert}", sz=16),
+         ""],
     ], colWidths=[_W_ESQUERDA, _W_DIREITA],
-       rowHeights=[_H_CAB])
+       rowHeights=[_H_LOGO_MAX, 7*mm, 10*mm])
 
     cab.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
         ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
-        ("VALIGN",       (0,0),(0,0),   "MIDDLE"),
+        # Coluna direita mescla as 3 linhas
+        ("SPAN",         (1,0),(1,2)),
+        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
         ("VALIGN",       (1,0),(1,0),   "TOP"),
         ("ALIGN",        (0,0),(-1,-1), "CENTER"),
-        ("TOPPADDING",   (0,0),(-1,-1), 4),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 4),
-        ("LEFTPADDING",  (0,0),(-1,-1), 2),
-        ("RIGHTPADDING", (0,0),(-1,-1), 2),
+        ("TOPPADDING",   (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+        ("TOPPADDING",   (1,0),(1,0),   5),
+        # Linha separadora entre "Certificado..." e "Nº XXXX/XX"
+        ("LINEBELOW",    (0,1),(0,1),   0.5, BK),
     ]))
     story.append(cab)
 
