@@ -1328,27 +1328,15 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     except Exception:
         data_fmt = str(data_em or "")
 
-    # Logo
-    _logo_cell = pl("")
-    try:
-        from empresa_config import get_config as _gc
-        import base64 as _b64l
-        _lb = (_gc("logo_certificado_base64","") or
-               _gc("logo1_base64","") or _gc("logo2_base64",""))
-        if _lb:
-            _logo_cell = RLImage(_io_pdf.BytesIO(_b64l.b64decode(_lb)),
-                                 width=55*mm, height=28*mm)
-    except Exception:
-        pass
-
     # ── CABECALHO ─────────────────────────────────────────────────────────────
-    # Larguras calibradas para garantir que o titulo caiba em UMA LINHA.
-    # "Certificado de Qualidade / Quality Certificate" Hz-Bold 9pt = ~67mm
-    # Coluna central precisa de pelo menos 67 + 8mm padding = 75mm.
-    # Usando logo=60mm + insp=38mm => meio=92mm (margem confortavel).
-    _W_LOGO = 60*mm
+    # Layout identico ao template:
+    #   Col 0 (70mm): Logo grande ocupando toda a altura
+    #   Col 1 (82mm): "Certificado de Qualidade..." + "No XXXX/XX"
+    #   Col 2 (38mm): INSPECTION CERTIFICATE + SFS
+    _W_LOGO = 70*mm
     _W_INSP = 38*mm
-    _W_MEIO = W - _W_LOGO - _W_INSP  # 92mm
+    _W_MEIO = W - _W_LOGO - _W_INSP  # 82mm
+    _H_CAB  = 35*mm  # altura total do cabecalho
 
     def _ph_cab(t, sz=8, bold=True):
         return Paragraph(str(t or ""), ParagraphStyle(
@@ -1360,6 +1348,20 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
             wordWrap="LTR",
         ))
 
+    # Logo: tenta carregar, senao deixa celula em branco
+    _logo_cell = Paragraph("", ParagraphStyle("empty", parent=styles["Normal"]))
+    try:
+        from empresa_config import get_config as _gc
+        import base64 as _b64l
+        _lb = (_gc("logo_certificado_base64","") or
+               _gc("logo1_base64","") or _gc("logo2_base64",""))
+        if _lb:
+            # Logo ocupa quase toda a coluna: largura = W_LOGO - 4mm padding, altura proporcional
+            _logo_cell = RLImage(_io_pdf.BytesIO(_b64l.b64decode(_lb)),
+                                 width=66*mm, height=32*mm)
+    except Exception:
+        pass
+
     cab_linha1 = Table([[
         _logo_cell,
         [_ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
@@ -1368,7 +1370,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
          _ph_cab("CERTIFICATE", sz=10),
          Spacer(1, 1*mm),
          _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False)],
-    ]], colWidths=[_W_LOGO, _W_MEIO, _W_INSP], rowHeights=[30*mm])
+    ]], colWidths=[_W_LOGO, _W_MEIO, _W_INSP], rowHeights=[_H_CAB])
     cab_linha1.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
         ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
