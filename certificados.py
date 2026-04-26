@@ -1395,7 +1395,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         [_ph_cab(f"Nº {num_cert}", sz=16),
          ""],
     ], colWidths=[_W_ESQUERDA, _W_DIREITA],
-       rowHeights=[_H_LOGO_MAX, 6*mm, 11*mm])
+       rowHeights=[_H_LOGO_MAX, 7*mm, 9*mm])
 
     cab.setStyle(TableStyle([
         # Borda externa completa
@@ -1410,8 +1410,9 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         ("TOPPADDING",   (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
         ("TOPPADDING",   (1,0),(1,0),   5),
-        # Linha separadora ABAIXO do titulo, ACIMA do numero
-        ("LINEBELOW",    (0,1),(0,1),   0.5, BK),
+        # Linha horizontal completa (col 0 ate col 1) abaixo do "Certificado de Qualidade"
+        # separando logo/titulo do Nº do certificado
+        ("LINEBELOW",    (0,1),(-1,1),  0.5, BK),
     ]))
     story.append(cab)
 
