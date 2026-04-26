@@ -1381,27 +1381,26 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     except Exception:
         pass
 
-    # Cabecalho: 3 linhas x 2 colunas
-    # Linha 0: Logo          | INSPECTION / CERTIFICATE / SFS (span 3 linhas)
-    # Linha 1: Certificado.. | (span)
-    # Linha 2: Nº XXXX/XX   | (span)
-    # Linha separadora entre linha 1 e linha 2 (acima do numero)
+    # Linha 1: Logo | INSPECTION CERTIFICATE
+    # Linha 2: "Certificado de Qualidade..." | (vazio, mesclado)
+    # Linha 3: "No XXXX/XX" | (vazio, mesclado)
     cab = Table([
         [_logo_cell,
          [_ph_cab("INSPECTION", sz=11),
           _ph_cab("CERTIFICATE", sz=11),
-          Spacer(1, 3*mm),
+          Spacer(1, 2*mm),
           _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False)]],
         [_ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
          ""],
         [_ph_cab(f"Nº {num_cert}", sz=16),
          ""],
     ], colWidths=[_W_ESQUERDA, _W_DIREITA],
-       rowHeights=[_H_LOGO_MAX, 7*mm, 10*mm])
+       rowHeights=[_H_LOGO_MAX, 7*mm, 9*mm])
 
     cab.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
-        ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
+        # Linha vertical separando INSPECTION da coluna esquerda (todas as linhas)
+        ("LINEBEFORE",   (1,0),(1,2),   0.8, BK),
         # Coluna direita mescla as 3 linhas
         ("SPAN",         (1,0),(1,2)),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
@@ -1410,7 +1409,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         ("TOPPADDING",   (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
         ("TOPPADDING",   (1,0),(1,0),   5),
-        # Linha separadora entre "Certificado..." e "Nº XXXX/XX"
+        # Linha separadora entre logo/titulo e Nº do certificado
         ("LINEBELOW",    (0,1),(0,1),   0.5, BK),
     ]))
     story.append(cab)
