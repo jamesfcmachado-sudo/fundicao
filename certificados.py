@@ -954,9 +954,13 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         try:
             f = float(v or 0)
             if f == 0: return ""
-            # Remove zeros a direita mas mantem pelo menos 2 casas
-            s = f"{f:.4f}".rstrip("0")
-            if s.endswith("."): s += "0"
+            # Usa 4 casas e remove zeros a direita
+            s = f"{f:.4f}"
+            # Remove zeros a direita apos a virgula
+            s = s.rstrip("0").rstrip(".")
+            # Garante pelo menos 1 casa decimal
+            if "." not in s:
+                s = s + ".0"
             return s.replace(".", ",")
         except Exception:
             return str(v or "")
@@ -974,6 +978,26 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     obs      = cert_data.get("observacoes", "")
     outros   = cert_data.get("outros_ensaios", "")
     tipo     = str(cert_data.get("tipo_template", "sem_ensaio"))
+
+    # Busca norma e liga da OF se nao estiver preenchida no certificado
+    if not norma and corridas:
+        try:
+            from fundicao_db import engine as _eng
+            from sqlalchemy import text as _text
+            # Pega a primeira OF das corridas
+            _cm0 = corridas[0]._mapping if hasattr(corridas[0], "_mapping") else {}
+            _nof0 = _cm0.get("numero_of", "")
+            if _nof0:
+                with _eng.connect() as _conn_of:
+                    _of_row = _conn_of.execute(_text("""
+                        SELECT norma, liga FROM ordem_fabricacao
+                        WHERE numero_of = :nof LIMIT 1
+                    """), {"nof": _nof0}).fetchone()
+                    if _of_row:
+                        norma = str(_of_row[0] or "")
+                        liga  = str(_of_row[1] or liga or "")
+        except Exception:
+            pass
 
     # Formata data
     try:
