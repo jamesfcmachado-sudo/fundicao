@@ -1337,7 +1337,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
                _gc("logo1_base64","") or _gc("logo2_base64",""))
         if _lb:
             _logo_cell = RLImage(_io_pdf.BytesIO(_b64l.b64decode(_lb)),
-                                 width=45*mm, height=24*mm)
+                                 width=55*mm, height=28*mm)
     except Exception:
         pass
 
@@ -1363,7 +1363,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     cab_linha1 = Table([[
         _logo_cell,
         [_ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
-         _ph_cab(f"No {num_cert}", sz=14)],
+         _ph_cab(f"Nº {num_cert}", sz=14)],
         [_ph_cab("INSPECTION", sz=10),
          _ph_cab("CERTIFICATE", sz=10),
          Spacer(1, 1*mm),
@@ -1418,8 +1418,16 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
 
     # ── COMPOSIÇÃO QUÍMICA ────────────────────────────────────────────────────
     ELEM = ["C","Si","Mn","P","S","Cr","Ni","Mo"]
-    comp_hdr = [ph("OF"), ph("CORRIDA\nHEAT Nº")] + [ph(e) for e in ELEM]
-    comp_rows = [comp_hdr]
+
+    # Cabecalho identico ao template: OF | CORRIDA / HEAT No | elementos
+    # Linha 1: "OF"(span2) | "CORRIDA" | C | Si | Mn | P | S | Cr | Ni | Mo
+    # Linha 2: "OF"(span2) | "HEAT No" | (elementos sem cabecalho)
+    # Simulado com 2 linhas de header e SPAN na coluna OF
+    cw_c = [20*mm, 22*mm] + [(W-42*mm)/8]*8
+
+    comp_hdr1 = [ph("OF"), ph("CORRIDA")] + [ph(e) for e in ELEM]
+    comp_hdr2 = [ph(""),   ph("HEAT Nº")] + [ph("") for _ in ELEM]
+    comp_rows = [comp_hdr1, comp_hdr2]
 
     for corr in corridas:
         _cm = corr._mapping if hasattr(corr, "_mapping") else {}
@@ -1430,19 +1438,17 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
             row.append(pc(fmt_num(_cm.get(ek, 0))))
         comp_rows.append(row)
 
-    while len(comp_rows) < 9:
+    while len(comp_rows) < 10:
         comp_rows.append([""] * 10)
 
-    # Altura das linhas: cabecalho maior, dados e vazias iguais
+    # Altura das linhas
     _n_corr = len(corridas)
-    _row_heights = [10*mm]  # cabecalho
+    _row_heights = [5*mm, 5*mm]  # 2 linhas de cabecalho
     for _ri in range(8):
         if _ri < _n_corr:
-            _row_heights.append(7*mm)  # linha com dados
+            _row_heights.append(7*mm)
         else:
-            _row_heights.append(6*mm)  # linha vazia
-
-    cw_c = [20*mm, 22*mm] + [(W-42*mm)/8]*8
+            _row_heights.append(6*mm)
     tit_comp = Table([[ph("I - COMPOSIÇÃO QUIMICA / CHEMICAL COMPOSITION")]],
                      colWidths=[W])
     tit_comp.setStyle(TableStyle([
@@ -1453,14 +1459,19 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     ]))
     comp_tbl = Table(comp_rows, colWidths=cw_c, rowHeights=_row_heights)
     comp_tbl.setStyle(TableStyle([
-        ("BACKGROUND",   (0,0),(-1,0), CINZA),
-        ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
+        # Fundo cinza em todo o cabecalho (linhas 0 e 1)
+        ("BACKGROUND",   (0,0),(-1,1), CINZA),
+        ("FONTNAME",     (0,0),(-1,1), "Helvetica-Bold"),
         ("FONTSIZE",     (0,0),(-1,-1), 7),
         ("GRID",         (0,0),(-1,-1), 0.4, BK),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
         ("ALIGN",        (0,0),(-1,-1), "CENTER"),
-        ("TOPPADDING",   (0,0),(-1,-1), 2),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+        ("TOPPADDING",   (0,0),(-1,-1), 1),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 1),
+        # SPAN vertical: coluna OF ocupa as 2 linhas do cabecalho
+        ("SPAN",         (0,0),(0,1)),
+        # Remove linha interna entre as 2 linhas do cabecalho na col OF
+        ("LINEBELOW",    (0,0),(0,0), 0, BK),
     ]))
     story.append(tit_comp)
     story.append(comp_tbl)
