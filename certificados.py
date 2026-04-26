@@ -1345,20 +1345,20 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     # Layout identico ao template:
     # Linha superior: Logo grande | vazio | INSPECTION CERTIFICATE
     # Linha inferior: vazio | Certificado de Qualidade / Nº | vazio
-    _W_LOGO = 70*mm
-    _W_MEIO = W - _W_LOGO - 45*mm
-    _W_INSP = 45*mm
+    _W_LOGO = 55*mm
+    _W_MEIO = W - _W_LOGO - 40*mm
+    _W_INSP = 40*mm
 
-    # Linha 1: Logo | titulo | INSPECTION
+    # Cabecalho identico ao template
     cab_linha1 = Table([[
         _logo_cell,
-        [ph("Certificado de Qualidade / Quality Certificate", sz=10),
+        [ph("Certificado de Qualidade / Quality Certificate", sz=9),
          ph(f"Nº {num_cert}", sz=14)],
         [ph("INSPECTION", sz=10),
          ph("CERTIFICATE", sz=10),
          Spacer(1, 1*mm),
-         ph("SFS - EM 10204 - 3.1", sz=8, bold=False)],
-    ]], colWidths=[_W_LOGO, _W_MEIO, _W_INSP], rowHeights=[30*mm])
+         ph("SFS - EM 10204 - 3.1", sz=7, bold=False)],
+    ]], colWidths=[_W_LOGO, _W_MEIO, _W_INSP], rowHeights=[28*mm])
     cab_linha1.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
         ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
