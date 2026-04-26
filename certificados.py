@@ -1345,25 +1345,41 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
             wordWrap="LTR",
         ))
 
-    # Logo: tenta carregar, senao deixa celula em branco
-    _logo_cell = Paragraph("", ParagraphStyle("empty", parent=styles["Normal"]))
-    try:
-        from empresa_config import get_config as _gc
-        import base64 as _b64l
-        _lb = (_gc("logo_certificado_base64","") or
-               _gc("logo1_base64","") or _gc("logo2_base64",""))
-        if _lb:
-            # Logo ocupa quase toda a coluna: largura = W_LOGO - 4mm padding, altura proporcional
-            _logo_cell = RLImage(_io_pdf.BytesIO(_b64l.b64decode(_lb)),
-                                 width=66*mm, height=32*mm)
-    except Exception:
-        pass
-
     # ── CABECALHO: 2 colunas identico ao template ────────────────────────────
     # Coluna E (larga): Logo em cima + "Certificado..." abaixo + "No XXXX/XX"
     # Coluna D (estreita): INSPECTION / CERTIFICATE / SFS
     _W_ESQUERDA = W - 42*mm   # ~148mm
     _W_DIREITA  = 42*mm
+    _H_LOGO_MAX = 22*mm       # altura maxima reservada para o logo
+
+    # Logo: calcula dimensoes respeitando proporcao original da imagem
+    _logo_cell = Paragraph("", ParagraphStyle("empty", parent=styles["Normal"]))
+    try:
+        from empresa_config import get_config as _gc
+        import base64 as _b64l
+        from PIL import Image as _PILImg
+        _lb = (_gc("logo_certificado_base64","") or
+               _gc("logo1_base64","") or _gc("logo2_base64",""))
+        if _lb:
+            _img_bytes = _b64l.b64decode(_lb)
+            _pil = _PILImg.open(_io_pdf.BytesIO(_img_bytes))
+            _iw, _ih = _pil.size  # dimensoes originais em pixels
+            _proporcao = _iw / _ih
+            # Largura maxima disponivel = largura da coluna - 4mm padding
+            _logo_w = _W_ESQUERDA - 4*mm
+            _logo_h = _logo_w / _proporcao
+            # Se altura calculada exceder o maximo, limita pela altura
+            if _logo_h > _H_LOGO_MAX:
+                _logo_h = _H_LOGO_MAX
+                _logo_w = _logo_h * _proporcao
+                # Garante que nao ultrapasse a largura da coluna
+                if _logo_w > _W_ESQUERDA - 4*mm:
+                    _logo_w = _W_ESQUERDA - 4*mm
+                    _logo_h = _logo_w / _proporcao
+            _logo_cell = RLImage(_io_pdf.BytesIO(_img_bytes),
+                                 width=_logo_w, height=_logo_h)
+    except Exception:
+        pass
 
     # Linha 1: Logo | INSPECTION CERTIFICATE
     # Linha 2: "Certificado de Qualidade..." | (vazio, mesclado)
@@ -1379,18 +1395,16 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         [_ph_cab(f"Nº {num_cert}", sz=16),
          ""],
     ], colWidths=[_W_ESQUERDA, _W_DIREITA],
-       rowHeights=[22*mm, 7*mm, 9*mm])
+       rowHeights=[_H_LOGO_MAX, 7*mm, 9*mm])
 
     cab.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
         ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
-        # Mescla coluna direita nas 3 linhas (INSPECTION ocupa tudo)
         ("SPAN",         (1,0),(1,2)),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
         ("ALIGN",        (0,0),(-1,-1), "CENTER"),
         ("TOPPADDING",   (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-        # Linha separadora entre logo e titulo (linha 0 e linha 1)
         ("LINEBELOW",    (0,0),(0,0),   0.5, BK),
     ]))
     story.append(cab)
