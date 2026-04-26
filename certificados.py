@@ -634,7 +634,8 @@ def tela_novo_certificado():
 
     # ── Alterar / Excluir Certificado ─────────────────────────────────────────
     st.divider()
-    with st.expander("🔧 Alterar ou Excluir Certificado Existente"):
+    st.subheader("🔧 Alterar ou Excluir Certificado Existente")
+    with st.expander("Clique para buscar um certificado", expanded=False):
         st.caption("Busque um certificado pelo número para editar ou excluir.")
 
         _num_alt = st.text_input("Nº do Certificado",
