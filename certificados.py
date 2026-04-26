@@ -1333,10 +1333,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     #   Col 0 (70mm): Logo grande ocupando toda a altura
     #   Col 1 (82mm): "Certificado de Qualidade..." + "No XXXX/XX"
     #   Col 2 (38mm): INSPECTION CERTIFICATE + SFS
-    _W_LOGO = 70*mm
-    _W_INSP = 38*mm
-    _W_MEIO = W - _W_LOGO - _W_INSP  # 82mm
-    _H_CAB  = 35*mm  # altura total do cabecalho
+    # larguras definidas abaixo no bloco do cabecalho
 
     def _ph_cab(t, sz=8, bold=True):
         return Paragraph(str(t or ""), ParagraphStyle(
@@ -1362,27 +1359,41 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     except Exception:
         pass
 
-    cab_linha1 = Table([[
-        _logo_cell,
+    # ── CABECALHO: 2 colunas identico ao template ────────────────────────────
+    # Coluna E (larga): Logo em cima + "Certificado..." abaixo + "No XXXX/XX"
+    # Coluna D (estreita): INSPECTION / CERTIFICATE / SFS
+    _W_ESQUERDA = W - 42*mm   # ~148mm
+    _W_DIREITA  = 42*mm
+
+    # Linha 1: Logo | INSPECTION CERTIFICATE
+    # Linha 2: "Certificado de Qualidade..." | (vazio, mesclado)
+    # Linha 3: "No XXXX/XX" | (vazio, mesclado)
+    cab = Table([
+        [_logo_cell,
+         [_ph_cab("INSPECTION", sz=11),
+          _ph_cab("CERTIFICATE", sz=11),
+          Spacer(1, 2*mm),
+          _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False)]],
         [_ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
-         _ph_cab(f"Nº {num_cert}", sz=14)],
-        [_ph_cab("INSPECTION", sz=10),
-         _ph_cab("CERTIFICATE", sz=10),
-         Spacer(1, 1*mm),
-         _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False)],
-    ]], colWidths=[_W_LOGO, _W_MEIO, _W_INSP], rowHeights=[_H_CAB])
-    cab_linha1.setStyle(TableStyle([
+         ""],
+        [_ph_cab(f"Nº {num_cert}", sz=16),
+         ""],
+    ], colWidths=[_W_ESQUERDA, _W_DIREITA],
+       rowHeights=[22*mm, 7*mm, 9*mm])
+
+    cab.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
         ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
-        ("LINEBEFORE",   (2,0),(2,0),   0.8, BK),
+        # Mescla coluna direita nas 3 linhas (INSPECTION ocupa tudo)
+        ("SPAN",         (1,0),(1,2)),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
-        ("ALIGN",        (0,0),(0,0),   "CENTER"),
-        ("TOPPADDING",   (0,0),(-1,-1), 3),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
-        ("LEFTPADDING",  (1,0),(1,0),   4),
-        ("RIGHTPADDING", (1,0),(1,0),   4),
+        ("ALIGN",        (0,0),(-1,-1), "CENTER"),
+        ("TOPPADDING",   (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+        # Linha separadora entre logo e titulo (linha 0 e linha 1)
+        ("LINEBELOW",    (0,0),(0,0),   0.5, BK),
     ]))
-    story.append(cab_linha1)
+    story.append(cab)
 
     # ── CLIENTE ───────────────────────────────────────────────────────────────
     cli_tbl = Table([[
