@@ -1023,25 +1023,30 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         pass
 
     # ── CABECALHO ─────────────────────────────────────────────────────────────
-    # Logo | Titulo centralizado | INSPECTION CERTIFICATE
+    # Linha 1: Logo | Titulo + Numero | INSPECTION CERTIFICATE
+    _insp_cell = [
+        ph("INSPECTION", sz=9),
+        ph("CERTIFICATE", sz=9),
+        Spacer(1, 2*mm),
+        ph("SFS - EM 10204 - 3.1", sz=8, bold=False),
+    ]
+    _titulo_cell = [
+        ph("Certificado de Qualidade / Quality Certificate", sz=10),
+        ph(f"Nº {num_cert}", sz=14),
+    ]
     cab = Table([[
         _logo_cell,
-        [ph("Certificado de Qualidade / Quality Certificate", sz=10),
-         Spacer(1, 1*mm),
-         ph(f"Nº {num_cert}", sz=14)],
-        [ph("INSPECTION", sz=9),
-         ph("CERTIFICATE", sz=9),
-         Spacer(1, 2*mm),
-         ph("SFS - EM 10204 - 3.1", sz=8, bold=False)],
-    ]], colWidths=[48*mm, W*0.50, W*0.27], rowHeights=[30*mm])
+        _titulo_cell,
+        _insp_cell,
+    ]], colWidths=[50*mm, W*0.48, W*0.26], rowHeights=[32*mm])
     cab.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
         ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
         ("LINEBEFORE",   (2,0),(2,0),   0.8, BK),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
         ("ALIGN",        (0,0),(0,0),   "CENTER"),
-        ("TOPPADDING",   (0,0),(-1,-1), 3),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+        ("TOPPADDING",   (0,0),(-1,-1), 4),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 4),
     ]))
     story.append(cab)
 
@@ -1065,15 +1070,16 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
          pl(""),
          pl("PROJETO / PROJECT", bold=True, sz=8),
          pl(str(projeto or ""), sz=8)],
-        [ph(f"{_norma_txt}", sz=13), "", "", ""],
+        [ph(f"{_norma_txt}", sz=14), "", "", ""],
     ], colWidths=[W*0.38, W*0.12, W*0.22, W*0.28])
     norma_tbl.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.5, BK),
         ("SPAN",         (0,1),(3,1)),
         ("ALIGN",        (0,1),(3,1), "CENTER"),
         ("LEFTPADDING",  (0,0),(-1,-1), 4),
-        ("TOPPADDING",   (0,0),(-1,-1), 2),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+        ("TOPPADDING",   (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 5),
+        ("TOPPADDING",   (0,1),(3,1), 4),
     ]))
     story.append(norma_tbl)
     story.append(Spacer(1, 2*mm))
@@ -1095,6 +1101,15 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     while len(comp_rows) < 9:
         comp_rows.append([""] * 10)
 
+    # Altura das linhas: cabecalho maior, dados e vazias iguais
+    _n_corr = len(corridas)
+    _row_heights = [10*mm]  # cabecalho
+    for _ri in range(8):
+        if _ri < _n_corr:
+            _row_heights.append(7*mm)  # linha com dados
+        else:
+            _row_heights.append(6*mm)  # linha vazia
+
     cw_c = [20*mm, 22*mm] + [(W-42*mm)/8]*8
     tit_comp = Table([[ph("I - COMPOSIÇÃO QUIMICA / CHEMICAL COMPOSITION")]],
                      colWidths=[W])
@@ -1104,7 +1119,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         ("TOPPADDING", (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
     ]))
-    comp_tbl = Table(comp_rows, colWidths=cw_c)
+    comp_tbl = Table(comp_rows, colWidths=cw_c, rowHeights=_row_heights)
     comp_tbl.setStyle(TableStyle([
         ("BACKGROUND",   (0,0),(-1,0), CINZA),
         ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
