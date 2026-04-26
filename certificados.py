@@ -1342,23 +1342,33 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         pass
 
     # ── CABECALHO ─────────────────────────────────────────────────────────────
-    # Layout identico ao template:
-    # Linha superior: Logo grande | vazio | INSPECTION CERTIFICATE
-    # Linha inferior: vazio | Certificado de Qualidade / Nº | vazio
-    _W_LOGO = 55*mm
-    _W_MEIO = W - _W_LOGO - 40*mm
-    _W_INSP = 40*mm
+    # Larguras calibradas para garantir que o titulo caiba em UMA LINHA.
+    # "Certificado de Qualidade / Quality Certificate" Hz-Bold 9pt = ~67mm
+    # Coluna central precisa de pelo menos 67 + 8mm padding = 75mm.
+    # Usando logo=60mm + insp=38mm => meio=92mm (margem confortavel).
+    _W_LOGO = 60*mm
+    _W_INSP = 38*mm
+    _W_MEIO = W - _W_LOGO - _W_INSP  # 92mm
 
-    # Cabecalho identico ao template
+    def _ph_cab(t, sz=8, bold=True):
+        return Paragraph(str(t or ""), ParagraphStyle(
+            "cab", parent=styles["Normal"],
+            fontSize=sz,
+            fontName="Helvetica-Bold" if bold else "Helvetica",
+            alignment=TA_CENTER,
+            leading=sz * 1.4,
+            wordWrap="LTR",
+        ))
+
     cab_linha1 = Table([[
         _logo_cell,
-        [ph("Certificado de Qualidade / Quality Certificate", sz=9),
-         ph(f"Nº {num_cert}", sz=14)],
-        [ph("INSPECTION", sz=10),
-         ph("CERTIFICATE", sz=10),
+        [_ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
+         _ph_cab(f"No {num_cert}", sz=14)],
+        [_ph_cab("INSPECTION", sz=10),
+         _ph_cab("CERTIFICATE", sz=10),
          Spacer(1, 1*mm),
-         ph("SFS - EM 10204 - 3.1", sz=7, bold=False)],
-    ]], colWidths=[_W_LOGO, _W_MEIO, _W_INSP], rowHeights=[28*mm])
+         _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False)],
+    ]], colWidths=[_W_LOGO, _W_MEIO, _W_INSP], rowHeights=[30*mm])
     cab_linha1.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
         ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
@@ -1367,6 +1377,8 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         ("ALIGN",        (0,0),(0,0),   "CENTER"),
         ("TOPPADDING",   (0,0),(-1,-1), 3),
         ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+        ("LEFTPADDING",  (1,0),(1,0),   4),
+        ("RIGHTPADDING", (1,0),(1,0),   4),
     ]))
     story.append(cab_linha1)
 
