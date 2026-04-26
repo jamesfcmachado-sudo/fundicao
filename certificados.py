@@ -1398,9 +1398,12 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
        rowHeights=[_H_LOGO_MAX, 7*mm, 9*mm])
 
     cab.setStyle(TableStyle([
+        # Borda externa completa
         ("BOX",          (0,0),(-1,-1), 0.8, BK),
-        # Linha vertical separando INSPECTION da coluna esquerda (todas as linhas)
+        # Linha vertical separando coluna INSPECTION em todas as linhas
         ("LINEBEFORE",   (1,0),(1,2),   0.8, BK),
+        # Linha horizontal inferior fechando o cabecalho
+        ("LINEBELOW",    (0,2),(-1,2),  0.8, BK),
         # Coluna direita mescla as 3 linhas
         ("SPAN",         (1,0),(1,2)),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
@@ -1409,7 +1412,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         ("TOPPADDING",   (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
         ("TOPPADDING",   (1,0),(1,0),   5),
-        # Linha separadora entre logo/titulo e Nº do certificado
+        # Linha separadora entre logo/titulo e Nº
         ("LINEBELOW",    (0,1),(0,1),   0.5, BK),
     ]))
     story.append(cab)
