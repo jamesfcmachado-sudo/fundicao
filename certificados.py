@@ -930,27 +930,40 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
 
     W = A4[0] - 20*mm
     styles = getSampleStyleSheet()
-    BK = colors.black
+    BK  = colors.black
     CINZA = colors.HexColor("#D9D9D9")
 
     def PS(name, **kw):
         return ParagraphStyle(name, parent=styles["Normal"], **kw)
 
     def ph(t, sz=8, bold=True):
-        fn = "Helvetica-Bold" if bold else "Helvetica"
-        return Paragraph(str(t or ""), PS("h", fontSize=sz,
-            fontName=fn, alignment=TA_CENTER, leading=sz+2))
+        return Paragraph(str(t or ""), PS("h",
+            fontSize=sz, fontName="Helvetica-Bold" if bold else "Helvetica",
+            alignment=TA_CENTER, leading=sz+2))
     def pc(t, sz=8):
-        return Paragraph(str(t or ""), PS("c", fontSize=sz,
-            fontName="Helvetica", alignment=TA_CENTER, leading=sz+2))
+        return Paragraph(str(t or ""), PS("c",
+            fontSize=sz, fontName="Helvetica",
+            alignment=TA_CENTER, leading=sz+2))
     def pl(t, sz=8, bold=False):
-        fn = "Helvetica-Bold" if bold else "Helvetica"
-        return Paragraph(str(t or ""), PS("l", fontSize=sz,
-            fontName=fn, alignment=TA_LEFT, leading=sz+2))
+        return Paragraph(str(t or ""), PS("l",
+            fontSize=sz, fontName="Helvetica-Bold" if bold else "Helvetica",
+            alignment=TA_LEFT, leading=sz+2))
+
+    def fmt_num(v):
+        """Formata numero com casas decimais variaveis como no template."""
+        try:
+            f = float(v or 0)
+            if f == 0: return ""
+            # Remove zeros a direita mas mantem pelo menos 2 casas
+            s = f"{f:.4f}".rstrip("0")
+            if s.endswith("."): s += "0"
+            return s.replace(".", ",")
+        except Exception:
+            return str(v or "")
 
     story = []
 
-    # Dados do certificado
+    # Dados
     num_cert = cert_data.get("numero_cert", "")
     cliente  = cert_data.get("cliente", "")
     norma    = cert_data.get("norma", "")
@@ -981,34 +994,38 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
                _gc("logo1_base64","") or _gc("logo2_base64",""))
         if _lb:
             _logo_cell = RLImage(_io_pdf.BytesIO(_b64l.b64decode(_lb)),
-                                 width=38*mm, height=20*mm)
+                                 width=45*mm, height=24*mm)
     except Exception:
         pass
 
-    # ── CABECALHO ────────────────────────────────────────────────────────────
+    # ── CABECALHO ─────────────────────────────────────────────────────────────
+    # Logo | Titulo centralizado | INSPECTION CERTIFICATE
     cab = Table([[
         _logo_cell,
         [ph("Certificado de Qualidade / Quality Certificate", sz=10),
-         ph(f"Nº {num_cert}", sz=13)],
-        [ph("INSPECTION\nCERTIFICATE", sz=9),
+         Spacer(1, 1*mm),
+         ph(f"Nº {num_cert}", sz=14)],
+        [ph("INSPECTION", sz=9),
+         ph("CERTIFICATE", sz=9),
+         Spacer(1, 2*mm),
          ph("SFS - EM 10204 - 3.1", sz=8, bold=False)],
-    ]], colWidths=[42*mm, W*0.52, W*0.28], rowHeights=[26*mm])
+    ]], colWidths=[48*mm, W*0.50, W*0.27], rowHeights=[30*mm])
     cab.setStyle(TableStyle([
-        ("BOX",         (0,0),(-1,-1), 0.8, BK),
-        ("LINEBEFORE",  (1,0),(1,0),   0.8, BK),
-        ("LINEBEFORE",  (2,0),(2,0),   0.8, BK),
-        ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
-        ("ALIGN",       (0,0),(0,0),   "CENTER"),
-        ("TOPPADDING",  (0,0),(-1,-1), 3),
+        ("BOX",          (0,0),(-1,-1), 0.8, BK),
+        ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
+        ("LINEBEFORE",   (2,0),(2,0),   0.8, BK),
+        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",        (0,0),(0,0),   "CENTER"),
+        ("TOPPADDING",   (0,0),(-1,-1), 3),
         ("BOTTOMPADDING",(0,0),(-1,-1), 3),
     ]))
     story.append(cab)
 
     # ── CLIENTE ───────────────────────────────────────────────────────────────
-    cli_tbl = Table([
-        [pl("CLIENTE / CUSTOMER:", bold=True),
-         pl(cliente.upper(), bold=True, sz=9)],
-    ], colWidths=[45*mm, W-45*mm])
+    cli_tbl = Table([[
+        pl("CLIENTE / CUSTOMER:", bold=True, sz=8),
+        pl(cliente.upper(), bold=True, sz=9),
+    ]], colWidths=[48*mm, W-48*mm])
     cli_tbl.setStyle(TableStyle([
         ("BOX",         (0,0),(-1,-1), 0.5, BK),
         ("LEFTPADDING", (0,0),(-1,-1), 4),
@@ -1020,17 +1037,19 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     # ── NORMA / LIGA ──────────────────────────────────────────────────────────
     _norma_txt = str(norma or liga or "")
     norma_tbl = Table([
-        [pl("NORMA DA LIGA/ ALLOY STANDARD", bold=True), pl(""),
-         pl("PROJETO / PROJECT", bold=True), pl(str(projeto or ""))],
+        [pl("NORMA DA LIGA/ ALLOY STANDARD", bold=True, sz=8),
+         pl(""),
+         pl("PROJETO / PROJECT", bold=True, sz=8),
+         pl(str(projeto or ""), sz=8)],
         [ph(f"{_norma_txt}", sz=13), "", "", ""],
-    ], colWidths=[W*0.35, W*0.15, W*0.2, W*0.3])
+    ], colWidths=[W*0.38, W*0.12, W*0.22, W*0.28])
     norma_tbl.setStyle(TableStyle([
-        ("BOX",         (0,0),(-1,-1), 0.5, BK),
-        ("SPAN",        (0,1),(3,1)),
-        ("ALIGN",       (0,1),(3,1), "CENTER"),
-        ("LEFTPADDING", (0,0),(-1,-1), 4),
-        ("TOPPADDING",  (0,0),(-1,-1), 2),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+        ("BOX",          (0,0),(-1,-1), 0.5, BK),
+        ("SPAN",         (0,1),(3,1)),
+        ("ALIGN",        (0,1),(3,1), "CENTER"),
+        ("LEFTPADDING",  (0,0),(-1,-1), 4),
+        ("TOPPADDING",   (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
     ]))
     story.append(norma_tbl)
     story.append(Spacer(1, 2*mm))
@@ -1046,29 +1065,14 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         _ncorr = str(_cm.get("numero_corrida","") or "")
         row = [pc(_nof), pc(_ncorr)]
         for ek in ["c","si","mn","p","s","cr","ni","mo"]:
-            v = float(_cm.get(ek, 0) or 0)
-            row.append(pc(f"{v:.4f}".replace(".", ",")))
+            row.append(pc(fmt_num(_cm.get(ek, 0))))
         comp_rows.append(row)
 
-    # Linhas vazias
     while len(comp_rows) < 9:
         comp_rows.append([""] * 10)
 
     cw_c = [20*mm, 22*mm] + [(W-42*mm)/8]*8
-    comp_tbl = Table(comp_rows, colWidths=cw_c)
-    comp_tbl.setStyle(TableStyle([
-        ("BACKGROUND",  (0,0),(-1,0), CINZA),
-        ("FONTNAME",    (0,0),(-1,0), "Helvetica-Bold"),
-        ("FONTSIZE",    (0,0),(-1,-1), 7),
-        ("GRID",        (0,0),(-1,-1), 0.4, BK),
-        ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
-        ("ALIGN",       (0,0),(-1,-1), "CENTER"),
-        ("TOPPADDING",  (0,0),(-1,-1), 2),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-    ]))
-
-    # Titulo composicao
-    tit_comp = Table([[ph("I - COMPOSIÇÃO QUIMICA / CHEMICAL COMPOSITION", sz=8)]],
+    tit_comp = Table([[ph("I - COMPOSIÇÃO QUIMICA / CHEMICAL COMPOSITION")]],
                      colWidths=[W])
     tit_comp.setStyle(TableStyle([
         ("BACKGROUND", (0,0),(-1,-1), CINZA),
@@ -1076,11 +1080,22 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         ("TOPPADDING", (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
     ]))
+    comp_tbl = Table(comp_rows, colWidths=cw_c)
+    comp_tbl.setStyle(TableStyle([
+        ("BACKGROUND",   (0,0),(-1,0), CINZA),
+        ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
+        ("FONTSIZE",     (0,0),(-1,-1), 7),
+        ("GRID",         (0,0),(-1,-1), 0.4, BK),
+        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",        (0,0),(-1,-1), "CENTER"),
+        ("TOPPADDING",   (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+    ]))
     story.append(tit_comp)
     story.append(comp_tbl)
     story.append(Spacer(1, 2*mm))
 
-    # ── ENSAIOS MECÂNICOS (só com_ensaio) ────────────────────────────────────
+    # ── ENSAIOS MECÂNICOS ─────────────────────────────────────────────────────
     if "com_ensaio" in tipo and ensaios:
         ens_hdr = [ph("LIM. RES.\n(MPa)"), ph("LIM. ESC.\n(MPa)"),
                    ph("ALONG.\n(%)"), ph("RED. ÁREA\n(%)"),
@@ -1098,7 +1113,12 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
                 pc(f"{float(em.get('impacto_j3',0) or 0):.1f}"),
                 pc(f"{float(em.get('temperatura',0) or 0):.1f}"),
             ])
-
+        tit_ens = Table([[ph("II - PROPRIEDADES MECÂNICAS / MECHANICAL PROPERTIES")]],
+                        colWidths=[W])
+        tit_ens.setStyle(TableStyle([
+            ("BACKGROUND", (0,0),(-1,-1), CINZA),
+            ("BOX",        (0,0),(-1,-1), 0.5, BK),
+        ]))
         ens_tbl = Table(ens_rows, colWidths=[W/8]*8)
         ens_tbl.setStyle(TableStyle([
             ("BACKGROUND", (0,0),(-1,0), CINZA),
@@ -1109,25 +1129,20 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
             ("TOPPADDING", (0,0),(-1,-1), 2),
             ("BOTTOMPADDING",(0,0),(-1,-1), 2),
         ]))
-        tit_ens = Table([[ph("II - PROPRIEDADES MECÂNICAS / MECHANICAL PROPERTIES")]],
-                        colWidths=[W])
-        tit_ens.setStyle(TableStyle([
-            ("BACKGROUND", (0,0),(-1,-1), CINZA),
-            ("BOX",        (0,0),(-1,-1), 0.5, BK),
-        ]))
         story.append(tit_ens)
         story.append(ens_tbl)
         story.append(Spacer(1, 2*mm))
 
     # ── ITENS ────────────────────────────────────────────────────────────────
     it_hdr = [ph("Pedido/Item\nP.O."), ph("Modelo\nPattern"),
-              ph("Descrição\nDescription"), ph("Séries\nSeries"),
-              ph("Quantidade\nQuantity")]
+              ph("Descrição\nDescription"),
+              ph("Séries\nSeries"), ph("Quantidade\nQuantity")]
     it_rows = [it_hdr]
     for it in itens:
         im = it._mapping if hasattr(it,"_mapping") else it
         it_rows.append([
-            pc(im.get("pedido","")), pc(im.get("modelo","")),
+            pc(im.get("pedido","")),
+            pc(im.get("modelo","")),
             pl(im.get("descricao","")),
             pc(im.get("series","")),
             pc(str(im.get("quantidade",""))),
@@ -1135,43 +1150,46 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     while len(it_rows) < 9:
         it_rows.append(["","","","",""])
 
-    it_tbl = Table(it_rows, colWidths=[W*0.20, W*0.14, W*0.37, W*0.15, W*0.14])
-    it_tbl.setStyle(TableStyle([
-        ("BACKGROUND",  (0,0),(-1,0), CINZA),
-        ("GRID",        (0,0),(-1,-1), 0.4, BK),
-        ("FONTSIZE",    (0,0),(-1,-1), 7),
-        ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
-        ("ALIGN",       (0,0),(1,-1), "CENTER"),
-        ("ALIGN",       (2,0),(2,-1), "LEFT"),
-        ("ALIGN",       (3,0),(-1,-1), "CENTER"),
-        ("TOPPADDING",  (0,0),(-1,-1), 2),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-        ("LEFTPADDING", (2,0),(2,-1), 3),
-    ]))
     tit_it = Table([[ph("II - OUTROS DADOS / OTHER INFORMATIONS")]],
                    colWidths=[W])
     tit_it.setStyle(TableStyle([
         ("BACKGROUND", (0,0),(-1,-1), CINZA),
         ("BOX",        (0,0),(-1,-1), 0.5, BK),
+        ("TOPPADDING", (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+    ]))
+    it_tbl = Table(it_rows, colWidths=[W*0.20, W*0.14, W*0.37, W*0.15, W*0.14])
+    it_tbl.setStyle(TableStyle([
+        ("BACKGROUND",   (0,0),(-1,0), CINZA),
+        ("GRID",         (0,0),(-1,-1), 0.4, BK),
+        ("FONTSIZE",     (0,0),(-1,-1), 7),
+        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
+        ("ALIGN",        (0,0),(1,-1), "CENTER"),
+        ("ALIGN",        (2,0),(2,-1), "LEFT"),
+        ("ALIGN",        (3,0),(-1,-1), "CENTER"),
+        ("TOPPADDING",   (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+        ("LEFTPADDING",  (2,0),(2,-1), 3),
     ]))
     story.append(tit_it)
     story.append(it_tbl)
     story.append(Spacer(1, 2*mm))
 
     # ── OBSERVAÇÕES ───────────────────────────────────────────────────────────
-    obs_rows = [[ph("III - OBSERVAÇÕES / COMMENTS")]]
-    for _ in range(6):
-        obs_rows.append([pl("")])
-    obs_tbl = Table(obs_rows, colWidths=[W])
-    obs_tbl.setStyle(TableStyle([
-        ("BACKGROUND",  (0,0),(0,0), CINZA),
-        ("BOX",         (0,0),(-1,-1), 0.5, BK),
-        ("LINEBELOW",   (0,0),(0,0), 0.5, BK),
-        ("TOPPADDING",  (0,0),(-1,-1), 2),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
-    ]))
+    obs_data = [[ph("III - OBSERVAÇÕES / COMMENTS")]]
+    for _ in range(7):
+        obs_data.append([pl("")])
     if obs:
-        obs_rows[1] = [pl(f"  {obs}")]
+        obs_data[1] = [pl(f"  {obs}")]
+    obs_tbl = Table(obs_data, colWidths=[W])
+    obs_tbl.setStyle(TableStyle([
+        ("BACKGROUND",   (0,0),(0,0), CINZA),
+        ("BOX",          (0,0),(-1,-1), 0.5, BK),
+        ("LINEBELOW",    (0,0),(0,0), 0.5, BK),
+        ("TOPPADDING",   (0,0),(-1,-1), 2),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+        ("LEFTPADDING",  (0,0),(-1,-1), 4),
+    ]))
     story.append(obs_tbl)
     story.append(Spacer(1, 2*mm))
 
@@ -1182,13 +1200,13 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         [pl(""), pl("")],
     ], colWidths=[W*0.85, W*0.15])
     out_tbl.setStyle(TableStyle([
-        ("BACKGROUND",  (0,0),(-1,0), CINZA),
-        ("BOX",         (0,0),(-1,-1), 0.5, BK),
-        ("LINEBEFORE",  (1,0),(1,-1), 0.5, BK),
-        ("LINEBELOW",   (0,0),(-1,0), 0.5, BK),
-        ("TOPPADDING",  (0,0),(-1,-1), 2),
+        ("BACKGROUND",   (0,0),(-1,0), CINZA),
+        ("BOX",          (0,0),(-1,-1), 0.5, BK),
+        ("LINEBEFORE",   (1,0),(1,-1), 0.5, BK),
+        ("LINEBELOW",    (0,0),(-1,0), 0.5, BK),
+        ("TOPPADDING",   (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 4),
-        ("LEFTPADDING", (0,0),(-1,-1), 4),
+        ("LEFTPADDING",  (0,0),(-1,-1), 4),
     ]))
     story.append(out_tbl)
     story.append(Spacer(1, 2*mm))
@@ -1200,11 +1218,11 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         [pl(f"Data / Date : {data_fmt}"),     ph("CONTROLE DE QUALIDADE")],
     ], colWidths=[W*0.5, W*0.5])
     rod_tbl.setStyle(TableStyle([
-        ("BOX",         (0,0),(-1,-1), 0.5, BK),
-        ("LINEABOVE",   (0,2),(-1,2), 0.5, BK),
-        ("LINEBEFORE",  (1,0),(1,-1), 0.5, BK),
-        ("LEFTPADDING", (0,0),(-1,-1), 4),
-        ("TOPPADDING",  (0,0),(-1,-1), 3),
+        ("BOX",          (0,0),(-1,-1), 0.5, BK),
+        ("LINEABOVE",    (0,2),(-1,2), 0.5, BK),
+        ("LINEBEFORE",   (1,0),(1,-1), 0.5, BK),
+        ("LEFTPADDING",  (0,0),(-1,-1), 4),
+        ("TOPPADDING",   (0,0),(-1,-1), 3),
         ("BOTTOMPADDING",(0,0),(-1,-1), 3),
     ]))
     story.append(rod_tbl)
