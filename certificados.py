@@ -1468,8 +1468,8 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     ], colWidths=[_W_ESQUERDA, _W_DIREITA])
     norma_tbl.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.5, BK),
-        # Linha vertical na mesma posicao do cabecalho
-        ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
+        # Linha vertical nas 2 linhas (NORMA DA LIGA e ASTM)
+        ("LINEBEFORE",   (1,0),(1,1),   0.8, BK),
         ("SPAN",         (0,1),(1,1)),
         ("ALIGN",        (0,1),(1,1), "CENTER"),
         ("LEFTPADDING",  (0,0),(-1,-1), 4),
