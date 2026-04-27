@@ -680,6 +680,35 @@ def pagina_lancar_corrida() -> None:
     st.caption("Gravação na tabela **corrida** do arquivo **fundicao.db**.")
     st.caption("**Número da Corrida** e **Número da OF** (se informado): formato `000A0`.")
 
+    # ── Autocomplete da CORRIDA (fora do form para ser reativo) ──────────────
+    _numero_corrida_input = st.text_input(
+        "Número da corrida *",
+        placeholder="001A6",
+        help="Ao digitar uma corrida já cadastrada, preenche automaticamente liga, norma e composição.",
+        key="lancar_corrida_num_input",
+    )
+    # Busca corrida existente no banco
+    _corr_liga_auto   = ""
+    _corr_norma_auto  = ""
+    _corr_comp_auto   = {}
+    _corr_cliente_auto = ""
+    if _numero_corrida_input.strip():
+        try:
+            with SessionLocal() as _db_corr:
+                _corr_found = _db_corr.execute(
+                    select(Corrida).where(
+                        Corrida.numero_corrida == _numero_corrida_input.strip().upper()
+                    ).order_by(Corrida.criado_em.desc())
+                ).scalars().first()
+            if _corr_found:
+                _corr_liga_auto    = _corr_found.liga or ""
+                _corr_norma_auto   = _corr_found.norma or ""
+                _corr_comp_auto    = _corr_found.composicao_quimica_pct or {}
+                _corr_cliente_auto = _corr_found.nome_cliente or ""
+                st.info(f"🔄 Corrida encontrada — liga: **{_corr_liga_auto}** | norma: **{_corr_norma_auto}** | composição preenchida automaticamente.")
+        except Exception:
+            pass
+
     # ── Autocomplete da OF (fora do form para ser reativo) ───────────────────
     _numero_of_input = st.text_input(
         "Número da OF",
@@ -688,9 +717,9 @@ def pagina_lancar_corrida() -> None:
         key="lancar_corrida_of_input",
     )
     # Busca dados da OF no banco ao digitar
-    _of_cliente_auto = ""
-    _of_liga_auto    = ""
-    _of_norma_auto   = ""
+    _of_cliente_auto = _corr_cliente_auto  # usa cliente da corrida se existir
+    _of_liga_auto    = _corr_liga_auto
+    _of_norma_auto   = _corr_norma_auto
     _of_id_auto      = None
     if _numero_of_input.strip():
         try:
@@ -702,8 +731,8 @@ def pagina_lancar_corrida() -> None:
                 ).scalar_one_or_none()
             if _of_found:
                 _of_cliente_auto = _of_found.nome_cliente or ""
-                _of_liga_auto    = _of_found.liga or ""
-                _of_norma_auto   = _of_found.norma or ""
+                _of_liga_auto    = _of_found.liga or _corr_liga_auto
+                _of_norma_auto   = _of_found.norma or _corr_norma_auto
                 _of_id_auto      = _of_found.id
                 st.success(f"✅ OF encontrada: **{_of_found.nome_cliente}**")
             else:
@@ -713,25 +742,19 @@ def pagina_lancar_corrida() -> None:
             pass
 
     with st.form("form_corrida", clear_on_submit=False):
-        l1c1, l1c2, l1c3, l1c4, l1c5 = st.columns(5)
+        l1c1, l1c2, l1c3, l1c4 = st.columns(4)
         with l1c1:
             data_fusao = st.date_input(
                 "Data de fusão *", value=date.today(), format=FORMATO_DATE_INPUT_BR
             )
         with l1c2:
-            numero_corrida = st.text_input(
-                "Número da corrida *",
-                placeholder="001A6",
-                help="Regex: ^\\d{3}[A-L]\\d$",
-            )
-        with l1c3:
             nome_cliente = st.text_input(
                 "Nome do cliente *",
                 value=_of_cliente_auto,
             )
-        with l1c4:
+        with l1c3:
             qtd_fundidas = st.number_input("Qtd peças fundidas *", min_value=0, value=0, step=1)
-        with l1c5:
+        with l1c4:
             serie = st.text_input("Série das peças")
 
         l2c1, l2c2, l2c3, l2c4, l2c5, l2c6 = st.columns(6)
@@ -757,59 +780,59 @@ def pagina_lancar_corrida() -> None:
             with l3c1:
                 raw_json = st.text_area(
                     'JSON — ex.: {"C": 3.45, "Si": 2.1}',
-                    value="{}",
+                    value=json.dumps(_corr_comp_auto) if _corr_comp_auto else "{}",
                     label_visibility="visible",
                 )
         else:
             _els = ELEMENTOS_QUIMICOS
             with l3c1:
-                st.number_input(_els[0], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[0]}")
+                st.number_input(_els[0], min_value=0.0, value=float(_corr_comp_auto.get(_els[0], 0.0)), format="%.4f", key=f"chem_{_els[0]}")
             with l3c2:
-                st.number_input(_els[1], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[1]}")
+                st.number_input(_els[1], min_value=0.0, value=float(_corr_comp_auto.get(_els[1], 0.0)), format="%.4f", key=f"chem_{_els[1]}")
             with l3c3:
-                st.number_input(_els[2], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[2]}")
+                st.number_input(_els[2], min_value=0.0, value=float(_corr_comp_auto.get(_els[2], 0.0)), format="%.4f", key=f"chem_{_els[2]}")
             with l3c4:
-                st.number_input(_els[3], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[3]}")
+                st.number_input(_els[3], min_value=0.0, value=float(_corr_comp_auto.get(_els[3], 0.0)), format="%.4f", key=f"chem_{_els[3]}")
             with l3c5:
-                st.number_input(_els[4], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[4]}")
+                st.number_input(_els[4], min_value=0.0, value=float(_corr_comp_auto.get(_els[4], 0.0)), format="%.4f", key=f"chem_{_els[4]}")
             with l3c6:
-                st.number_input(_els[5], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[5]}")
+                st.number_input(_els[5], min_value=0.0, value=float(_corr_comp_auto.get(_els[5], 0.0)), format="%.4f", key=f"chem_{_els[5]}")
 
         if not usar_json:
             l4c1, l4c2, l4c3, l4c4, l4c5, l4c6 = st.columns(6)
             with l4c1:
-                st.number_input(_els[6], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[6]}")
+                st.number_input(_els[6], min_value=0.0, value=float(_corr_comp_auto.get(_els[6], 0.0)), format="%.4f", key=f"chem_{_els[6]}")
             with l4c2:
-                st.number_input(_els[7], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[7]}")
+                st.number_input(_els[7], min_value=0.0, value=float(_corr_comp_auto.get(_els[7], 0.0)), format="%.4f", key=f"chem_{_els[7]}")
             with l4c3:
-                st.number_input(_els[8], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[8]}")
+                st.number_input(_els[8], min_value=0.0, value=float(_corr_comp_auto.get(_els[8], 0.0)), format="%.4f", key=f"chem_{_els[8]}")
             with l4c4:
-                st.number_input(_els[9], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[9]}")
+                st.number_input(_els[9], min_value=0.0, value=float(_corr_comp_auto.get(_els[9], 0.0)), format="%.4f", key=f"chem_{_els[9]}")
             with l4c5:
-                st.number_input(_els[10], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[10]}")
+                st.number_input(_els[10], min_value=0.0, value=float(_corr_comp_auto.get(_els[10], 0.0)), format="%.4f", key=f"chem_{_els[10]}")
             with l4c6:
-                st.number_input(_els[11], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[11]}")
+                st.number_input(_els[11], min_value=0.0, value=float(_corr_comp_auto.get(_els[11], 0.0)), format="%.4f", key=f"chem_{_els[11]}")
 
             l5c1, l5c2, l5c3, l5c4, l5c5, l5c6 = st.columns(6)
             with l5c1:
-                st.number_input(_els[12], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[12]}")
+                st.number_input(_els[12], min_value=0.0, value=float(_corr_comp_auto.get(_els[12], 0.0)), format="%.4f", key=f"chem_{_els[12]}")
             with l5c2:
-                st.number_input(_els[13], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[13]}")
+                st.number_input(_els[13], min_value=0.0, value=float(_corr_comp_auto.get(_els[13], 0.0)), format="%.4f", key=f"chem_{_els[13]}")
             with l5c3:
-                st.number_input(_els[14], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[14]}")
+                st.number_input(_els[14], min_value=0.0, value=float(_corr_comp_auto.get(_els[14], 0.0)), format="%.4f", key=f"chem_{_els[14]}")
             with l5c4:
-                st.number_input(_els[15], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[15]}")
+                st.number_input(_els[15], min_value=0.0, value=float(_corr_comp_auto.get(_els[15], 0.0)), format="%.4f", key=f"chem_{_els[15]}")
             with l5c5:
-                st.number_input(_els[16], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[16]}")
+                st.number_input(_els[16], min_value=0.0, value=float(_corr_comp_auto.get(_els[16], 0.0)), format="%.4f", key=f"chem_{_els[16]}")
             with l5c6:
-                st.number_input(_els[17], min_value=0.0, value=0.0, format="%.4f", key=f"chem_{_els[17]}")
+                st.number_input(_els[17], min_value=0.0, value=float(_corr_comp_auto.get(_els[17], 0.0)), format="%.4f", key=f"chem_{_els[17]}")
 
         enviar = st.form_submit_button("Salvar corrida")
 
     if not enviar:
         return
 
-    if not numero_corrida.strip():
+    if not _numero_corrida_input.strip():
         st.error("Preencha o numero da corrida.")
         return
     if not nome_cliente.strip():
@@ -819,7 +842,7 @@ def pagina_lancar_corrida() -> None:
         st.error("Preencha a data de fusao.")
         return
 
-    if not codigo_op_ou_corrida_valido(numero_corrida):
+    if not codigo_op_ou_corrida_valido(_numero_corrida_input.strip()):
         st.error(f"**Número da corrida:** {MSG_ERRO_FORMATO_OP_CORRIDA}")
         return
 
@@ -855,7 +878,7 @@ def pagina_lancar_corrida() -> None:
     now = datetime.now().astimezone()
     corrida = Corrida(
         data_fusao=data_fusao,
-        numero_corrida=numero_corrida.strip(),
+        numero_corrida=_numero_corrida_input.strip().upper(),
         nome_cliente=nome_cliente.strip(),
         ordem_fabricacao_id=of_id,
         numero_ordem_fabricacao=nof or None,
