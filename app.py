@@ -678,7 +678,7 @@ def pagina_nova_of() -> None:
 def pagina_lancar_corrida() -> None:
     st.title("Lançar Corrida")
     st.caption("Gravação na tabela **corrida** do arquivo **fundicao.db**.")
-    st.caption("**Número da Corrida** e **Número da OP** (se informado): formato `000A0`.")
+    st.caption("**Número da Corrida** e **Número da OF** (se informado): formato `000A0`.")
 
     with st.form("form_corrida", clear_on_submit=False):
         l1c1, l1c2, l1c3, l1c4, l1c5, l1c6 = st.columns(6)
@@ -696,7 +696,7 @@ def pagina_lancar_corrida() -> None:
             nome_cliente = st.text_input("Nome do cliente *")
         with l1c4:
             numero_of_str = st.text_input(
-                "Número da OP",
+                "Número da OF",
                 placeholder="001A6",
                 help="Opcional. Mesmo padrão 000A0.",
             )
