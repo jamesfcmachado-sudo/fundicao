@@ -1465,9 +1465,11 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
          Paragraph("PROJETO / PROJECT", ParagraphStyle("pr", parent=styles["Normal"],
              fontSize=8, fontName="Helvetica-Bold", alignment=TA_RIGHT, leading=10))],
         [ph(f"{_norma_txt}", sz=14), ""],
-    ], colWidths=[W*0.60, W*0.40])
+    ], colWidths=[_W_ESQUERDA, _W_DIREITA])
     norma_tbl.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.5, BK),
+        # Linha vertical na mesma posicao do cabecalho
+        ("LINEBEFORE",   (1,0),(1,0),   0.8, BK),
         ("SPAN",         (0,1),(1,1)),
         ("ALIGN",        (0,1),(1,1), "CENTER"),
         ("LEFTPADDING",  (0,0),(-1,-1), 4),
