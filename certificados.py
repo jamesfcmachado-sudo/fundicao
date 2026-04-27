@@ -1395,8 +1395,12 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     _H_TOPO   = _H_LOGO_MAX + 2*mm   # altura da linha 0 (logo + margem)
     _H_BAIXO  = 16*mm                 # altura da linha 1 (titulo + numero)
 
-    # Celula esquerda linha 0: logo centralizado
-    _cel_esq_0 = _logo_cell
+    # Celula esquerda linha 0: logo + titulo abaixo do logo
+    _cel_esq_0 = [
+        _logo_cell,
+        Spacer(1, 1*mm),
+        _ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
+    ]
 
     # Celula direita linha 0: INSPECTION CERTIFICATE SFS empilhados
     _cel_dir_0 = [
@@ -1406,11 +1410,8 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False),
     ]
 
-    # Celula esquerda linha 1: titulo + numero (2 paragrafos)
-    _cel_esq_1 = [
-        _ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
-        _ph_cab(f"N\u00ba {num_cert}", sz=16),
-    ]
+    # Celula esquerda linha 1: apenas numero do certificado
+    _cel_esq_1 = _ph_cab(f"N\u00ba {num_cert}", sz=16)
 
     cab = Table([
         [_cel_esq_0, _cel_dir_0],
