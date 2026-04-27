@@ -196,6 +196,7 @@ def _montar_linhas_of(ofs_list) -> list[dict]:
         _of_status = _status_map.get(of.numero_of, "Ativa")
 
         rows.append({
+            "_id":                  of.id,
             "numero_of":            of.numero_of or "",
             "numero_nn":            of.numero_nn or "",
             "nome_cliente":         of.nome_cliente or "",
@@ -1361,8 +1362,11 @@ def pagina_relatorios() -> None:
             # O numero_of é lido diretamente do df já ordenado — garante correspondência exata
             st.caption("Clique no ☐ à esquerda da linha para selecionar uma OF e usar as opções abaixo.")
             _altura_of = st.slider("Altura da tabela (px)", min_value=200, max_value=1400, value=500, step=50, key="altura_of")
+            # Guarda _id antes de remover do display
+            _df_ids_of = df["_id"].tolist() if "_id" in df.columns else []
+            df_display_of = df.drop(columns=["_id"], errors="ignore")
             sel_of = st.dataframe(
-                df,
+                df_display_of,
                 height=_altura_of,
                 use_container_width=True,
                 hide_index=True,
@@ -1373,16 +1377,18 @@ def pagina_relatorios() -> None:
             )
 
             buf = StringIO()
-            df.to_csv(buf, index=False)
+            df_display_of.to_csv(buf, index=False)
             st.download_button("⬇️ Baixar CSV — OFs completo", buf.getvalue(), file_name="relatorio_ofs.csv", mime="text/csv")
 
-            # Identifica linha selecionada — usa o df ordenado como fonte da verdade
+            # Identifica linha selecionada — usa _id para garantir correspondência correta
             _idx_of = (sel_of.selection.rows or [None])[0]
-            if _idx_of is not None:
-                _nof_sel = df.iloc[_idx_of]["Nº OF"] if _idx_of < len(df) else None
-                if _nof_sel:
+            if _idx_of is not None and _idx_of < len(df):
+                _of_id_sel  = df.iloc[_idx_of]["_id"] if "_id" in df.columns else None
+                _nof_sel    = df.iloc[_idx_of]["Nº OF"] if "Nº OF" in df.columns else ""
+                _label_sel  = _nof_sel if _nof_sel else f"(sem número — id: {str(_of_id_sel)[:8]})"
+                if _of_id_sel:
                     st.divider()
-                    st.subheader(f"OF selecionada: **{_nof_sel}**")
+                    st.subheader(f"OF selecionada: **{_label_sel}**")
                     _col_alt, _col_exc = st.columns(2)
 
                     # ── Alterar ──────────────────────────────────────────────
@@ -1517,16 +1523,16 @@ def pagina_relatorios() -> None:
                     if pode_excluir_of:
                      with _col_exc:
                       with st.expander("🗑️ Excluir esta OF", expanded=False):
-                            st.warning(f"Isso excluirá a OF **{_nof_sel}** e todos os seus registros vinculados (OEs, certificados). Esta ação **não pode ser desfeita**.")
-                            if st.button(f"⚠️ Confirmar exclusão de {_nof_sel}", key=f"btn_exc_of_{_nof_sel}", type="primary"):
+                            st.warning(f"Isso excluirá a OF **{_label_sel}** e todos os seus registros vinculados (OEs, certificados). Esta ação **não pode ser desfeita**.")
+                            if st.button(f"⚠️ Confirmar exclusão de {_label_sel}", key=f"btn_exc_of_{_of_id_sel}", type="primary"):
                                 try:
                                     with db_session() as _db_del:
                                         _of_del = _db_del.scalar(
-                                            select(OrdemFabricacao).where(OrdemFabricacao.numero_of == _nof_sel)
+                                            select(OrdemFabricacao).where(OrdemFabricacao.id == _of_id_sel)
                                         )
                                         if _of_del:
                                             _db_del.delete(_of_del)
-                                    st.success(f"OF **{_nof_sel}** excluída com sucesso.")
+                                    st.success(f"OF **{_label_sel}** excluída com sucesso.")
                                     st.session_state.pop("sel_df_ofs", None)
                                     st.rerun()
                                 except Exception as _ex:
