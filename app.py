@@ -1261,22 +1261,53 @@ def pagina_consulta_corridas() -> None:
 def _chave_of(codigo: str) -> tuple:
     """
     Chave de ordenação para códigos no formato 000X0 (ex: 001A6, 002B3).
-    - Remove "dev" (case-insensitive) antes de classificar.
-    - Ignora qualquer texto após o padrão 000X0 (ex: "001A0 extra" → classifica como "001A0").
-    - Ordena por: sufixo numérico final → letra central → número inicial.
-    - Resultado: 001A6, 002A6, 003A6, 001B6, 002B6, 001C6...
-    - Códigos fora do padrão vão para o final em ordem alfabética.
+
+    Formato: NNN + LETRA + D
+      NNN   = sequência no mês (001, 002...)
+      LETRA = mês (A=Jan, B=Fev, ... L=Dez)
+      D     = dígito do ano
+
+    Regra de década:
+      O dígito final representa o último dígito do ano.
+      Para evitar ambiguidade (ex: 9 pode ser 2019 ou 2029),
+      usamos um ANO_CORTE: dígitos <= ANO_CORTE pertencem à década atual (2020s),
+      dígitos > ANO_CORTE pertencem à década anterior (2010s).
+
+      ANO_CORTE = último dígito do ano atual + 1 (com margem de 1 ano à frente).
+      Ex: em 2026, ANO_CORTE = 7 → dígitos 0-7 = 2020-2027, dígitos 8-9 = 2018-2019.
+
+      Quando chegarmos em 2028 (ANO_CORTE=9), dígito 9 = 2029 e não haverá ambiguidade.
+      Em 2030, o formato provavelmente mudará — mas a lógica se adapta automaticamente.
+
+    Ordena por: ano_real → letra → sequência numérica (crescente)
+    Códigos fora do padrão vão para o final.
     """
     import re as _re
+    from datetime import date as _date
+
     if not codigo or not isinstance(codigo, str):
-        return (9, "Z", 9999, codigo or "")
-    # Remove "dev" e usa search (não fullmatch) para ignorar texto após o padrão
+        return (9999, "Z", 9999, codigo or "")
+
+    # Remove "dev" e busca padrão NNN + LETRA + D
     limpo = _re.sub(r"(?i)dev", "", codigo.strip()).strip()
     m = _re.search(r"(\d{1,4})([A-Za-z])(\d)", limpo)
-    if m:
-        num, letra, sfx = m.groups()
-        return (int(sfx), letra.upper(), int(num), codigo)
-    return (9, "Z", 9999, codigo)
+    if not m:
+        return (9999, "Z", 9999, codigo)
+
+    num, letra, sfx = m.groups()
+    digito = int(sfx)
+
+    # Calcula ano real com regra de corte de década
+    ano_atual = _date.today().year          # ex: 2026
+    decada_atual = (ano_atual // 10) * 10   # ex: 2020
+    ano_corte = (ano_atual % 10) + 1        # ex: 7 (em 2026)
+
+    if digito <= ano_corte:
+        ano_real = decada_atual + digito     # ex: 2020 + 6 = 2026
+    else:
+        ano_real = decada_atual - 10 + digito  # ex: 2010 + 9 = 2019
+
+    return (ano_real, letra.upper(), int(num), codigo)
 
 def pagina_relatorios() -> None:
     st.title("Relatórios")
