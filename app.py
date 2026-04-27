@@ -229,6 +229,9 @@ def _df_of_formatado(rows: list[dict]) -> "pd.DataFrame":
     """Converte lista de dicts em DataFrame com títulos amigáveis na ordem certa."""
     df = pd.DataFrame(rows, columns=[k for k, _ in _OF_DISPLAY_COLS])
     df = df.rename(columns={k: v for k, v in _OF_DISPLAY_COLS})
+    # Preserva _id para seleção por linha
+    if rows and "_id" in rows[0]:
+        df["_id"] = [r["_id"] for r in rows]
     return df
 
 
@@ -1380,11 +1383,11 @@ def pagina_relatorios() -> None:
             df_display_of.to_csv(buf, index=False)
             st.download_button("⬇️ Baixar CSV — OFs completo", buf.getvalue(), file_name="relatorio_ofs.csv", mime="text/csv")
 
-            # Identifica linha selecionada — usa _id para garantir correspondência correta
+            # Identifica linha selecionada — usa _df_ids_of para garantir correspondência correta
             _idx_of = (sel_of.selection.rows or [None])[0]
-            if _idx_of is not None and _idx_of < len(df):
-                _of_id_sel  = df.iloc[_idx_of]["_id"] if "_id" in df.columns else None
-                _nof_sel    = df.iloc[_idx_of]["Nº OF"] if "Nº OF" in df.columns else ""
+            if _idx_of is not None and _idx_of < len(_df_ids_of):
+                _of_id_sel  = _df_ids_of[_idx_of]
+                _nof_sel    = df_display_of.iloc[_idx_of]["Nº OF"] if "Nº OF" in df_display_of.columns else ""
                 _label_sel  = _nof_sel if _nof_sel else f"(sem número — id: {str(_of_id_sel)[:8]})"
                 if _of_id_sel:
                     st.divider()
