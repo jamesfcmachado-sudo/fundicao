@@ -1463,7 +1463,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     norma_tbl = Table([
         [pl("NORMA DA LIGA/ ALLOY STANDARD", bold=True, sz=8),
          Paragraph("PROJETO / PROJECT", ParagraphStyle("pr", parent=styles["Normal"],
-             fontSize=8, fontName="Helvetica-Bold", alignment=TA_RIGHT, leading=10))],
+             fontSize=8, fontName="Helvetica-Bold", alignment=TA_CENTER, leading=10))],
         [ph(f"{_norma_txt}", sz=14),
          pl("")],
     ], colWidths=[_W_ESQUERDA, _W_DIREITA])
