@@ -1412,11 +1412,11 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False),
     ]
 
-    # Celula esquerda linha 1: apenas numero do certificado - centralizado
+    # Celula esquerda linha 1: apenas numero do certificado - centralizado e maior
     _cel_esq_1 = Paragraph(f"N\u00ba {num_cert}", ParagraphStyle(
         "num_cert", parent=styles["Normal"],
-        fontSize=13, fontName="Helvetica-Bold",
-        alignment=TA_CENTER, leading=16,
+        fontSize=16, fontName="Helvetica-Bold",
+        alignment=TA_CENTER, leading=20,
     ))
 
     cab = Table([
@@ -1431,10 +1431,8 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         ("LINEBEFORE",  (1,0),(1,0),   0.8, BK),
         # Linha horizontal completa separando linha 0 de linha 1
         ("LINEBELOW",   (0,0),(-1,0),  0.5, BK),
-        # Celula direita linha 1 fica em branco sem bordas internas
-        ("SPAN",        (1,1),(1,1)),
-        ("BACKGROUND",  (1,1),(1,1),   colors.white),
-        ("LINEBEFORE",  (1,1),(1,1),   0,   colors.white),
+        # Numero do certificado ocupa TODA a largura (span linha 1)
+        ("SPAN",        (0,1),(1,1)),
         # Alinhamentos
         ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
         ("VALIGN",      (1,0),(1,0),   "MIDDLE"),
@@ -1449,10 +1447,11 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     cli_tbl = Table([[
         pl("CLIENTE / CUSTOMER:", bold=True, sz=8),
         pl(cliente.upper(), bold=True, sz=11),
-    ]], colWidths=[48*mm, W-48*mm])
+    ]], colWidths=[44*mm, W-44*mm])
     cli_tbl.setStyle(TableStyle([
         ("BOX",         (0,0),(-1,-1), 0.5, BK),
         ("LEFTPADDING", (0,0),(-1,-1), 4),
+        ("RIGHTPADDING",(0,0),(-1,-1), 4),
         ("TOPPADDING",  (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
         ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
