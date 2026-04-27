@@ -1447,7 +1447,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     cli_tbl = Table([[
         pl("CLIENTE / CUSTOMER:", bold=True, sz=8),
         pl(cliente.upper(), bold=True, sz=11),
-    ]], colWidths=[44*mm, W-44*mm])
+    ]], colWidths=[38*mm, W-38*mm])
     cli_tbl.setStyle(TableStyle([
         ("BOX",         (0,0),(-1,-1), 0.5, BK),
         ("LEFTPADDING", (0,0),(-1,-1), 4),
