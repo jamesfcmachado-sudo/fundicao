@@ -680,8 +680,40 @@ def pagina_lancar_corrida() -> None:
     st.caption("Gravação na tabela **corrida** do arquivo **fundicao.db**.")
     st.caption("**Número da Corrida** e **Número da OF** (se informado): formato `000A0`.")
 
+    # ── Autocomplete da OF (fora do form para ser reativo) ───────────────────
+    _numero_of_input = st.text_input(
+        "Número da OF",
+        placeholder="001A6",
+        help="Opcional. Ao digitar, busca cliente, liga e norma automaticamente.",
+        key="lancar_corrida_of_input",
+    )
+    # Busca dados da OF no banco ao digitar
+    _of_cliente_auto = ""
+    _of_liga_auto    = ""
+    _of_norma_auto   = ""
+    _of_id_auto      = None
+    if _numero_of_input.strip():
+        try:
+            with SessionLocal() as _db_of:
+                _of_found = _db_of.execute(
+                    select(OrdemFabricacao).where(
+                        OrdemFabricacao.numero_of == _numero_of_input.strip().upper()
+                    )
+                ).scalar_one_or_none()
+            if _of_found:
+                _of_cliente_auto = _of_found.nome_cliente or ""
+                _of_liga_auto    = _of_found.liga or ""
+                _of_norma_auto   = _of_found.norma or ""
+                _of_id_auto      = _of_found.id
+                st.success(f"✅ OF encontrada: **{_of_found.nome_cliente}**")
+            else:
+                if len(_numero_of_input.strip()) >= 5:
+                    st.warning("⚠️ OF não encontrada no banco.")
+        except Exception:
+            pass
+
     with st.form("form_corrida", clear_on_submit=False):
-        l1c1, l1c2, l1c3, l1c4, l1c5, l1c6 = st.columns(6)
+        l1c1, l1c2, l1c3, l1c4, l1c5 = st.columns(5)
         with l1c1:
             data_fusao = st.date_input(
                 "Data de fusão *", value=date.today(), format=FORMATO_DATE_INPUT_BR
@@ -693,23 +725,20 @@ def pagina_lancar_corrida() -> None:
                 help="Regex: ^\\d{3}[A-L]\\d$",
             )
         with l1c3:
-            nome_cliente = st.text_input("Nome do cliente *")
-        with l1c4:
-            numero_of_str = st.text_input(
-                "Número da OF",
-                placeholder="001A6",
-                help="Opcional. Mesmo padrão 000A0.",
+            nome_cliente = st.text_input(
+                "Nome do cliente *",
+                value=_of_cliente_auto,
             )
-        with l1c5:
+        with l1c4:
             qtd_fundidas = st.number_input("Qtd peças fundidas *", min_value=0, value=0, step=1)
-        with l1c6:
+        with l1c5:
             serie = st.text_input("Série das peças")
 
         l2c1, l2c2, l2c3, l2c4, l2c5, l2c6 = st.columns(6)
         with l2c1:
-            liga = st.text_input("Liga")
+            liga = st.text_input("Liga", value=_of_liga_auto)
         with l2c2:
-            norma = st.text_input("Norma")
+            norma = st.text_input("Norma", value=_of_norma_auto)
         with l2c3:
             usar_json = st.checkbox("Composição via JSON", value=False)
         with l2c4:
@@ -794,9 +823,9 @@ def pagina_lancar_corrida() -> None:
         st.error(f"**Número da corrida:** {MSG_ERRO_FORMATO_OP_CORRIDA}")
         return
 
-    nof_raw = numero_of_str.strip()
+    nof_raw = _numero_of_input.strip()
     if nof_raw and not codigo_op_ou_corrida_valido(nof_raw):
-        st.error(f"**Número da OP:** {MSG_ERRO_FORMATO_OP_CORRIDA}")
+        st.error(f"**Número da OF:** {MSG_ERRO_FORMATO_OP_CORRIDA}")
         return
 
     if usar_json:
