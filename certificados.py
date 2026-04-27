@@ -1464,19 +1464,20 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         [pl("NORMA DA LIGA/ ALLOY STANDARD", bold=True, sz=8),
          Paragraph("PROJETO / PROJECT", ParagraphStyle("pr", parent=styles["Normal"],
              fontSize=8, fontName="Helvetica-Bold", alignment=TA_RIGHT, leading=10))],
-        [ph(f"{_norma_txt}", sz=14), ""],
+        [ph(f"{_norma_txt}", sz=14),
+         pl("")],
     ], colWidths=[_W_ESQUERDA, _W_DIREITA])
     norma_tbl.setStyle(TableStyle([
         ("BOX",          (0,0),(-1,-1), 0.5, BK),
-        # Linha vertical nas 2 linhas (NORMA DA LIGA e ASTM)
+        # Linha vertical continua nas 2 linhas
         ("LINEBEFORE",   (1,0),(1,1),   0.8, BK),
-        ("SPAN",         (0,1),(1,1)),
-        ("ALIGN",        (0,1),(1,1), "CENTER"),
+        ("ALIGN",        (0,1),(0,1), "CENTER"),
         ("LEFTPADDING",  (0,0),(-1,-1), 4),
         ("RIGHTPADDING", (0,0),(-1,-1), 4),
         ("TOPPADDING",   (0,0),(-1,-1), 3),
         ("BOTTOMPADDING",(0,0),(-1,-1), 5),
-        ("TOPPADDING",   (0,1),(1,1), 4),
+        ("TOPPADDING",   (0,1),(0,1), 4),
+        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
     ]))
     story.append(norma_tbl)
     story.append(Spacer(1, 2*mm))
