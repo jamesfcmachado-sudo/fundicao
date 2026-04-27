@@ -1386,51 +1386,55 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     # Coluna direita: 1 celula alta com tabela interna (INSPECTION/CERTIFICATE/SFS)
     # Assim as linhas horizontais atravessam toda a largura corretamente
 
-    _H_LOGO  = _H_LOGO_MAX   # 22mm - altura do logo
-    _H_TITULO = 6*mm          # altura do "Certificado de Qualidade"
-    _H_NUM    = 10*mm         # altura do "Nº XXXX/XX"
-    _H_TOTAL  = _H_LOGO + _H_TITULO + _H_NUM  # altura total do cabecalho
+    # Cabecalho: 2 linhas x 2 colunas
+    # Linha 0: Logo (esq) | INSPECTION\nCERTIFICATE\nSFS (dir) — linha 0 alta
+    # Linha 1: "Certificado..." + "Nº XXXX" (esq, 2 paragrafos) | vazio (dir)
+    # Linha horizontal separa linha 0 de linha 1
+    # BOX fecha tudo por fora
 
-    # Tabela interna para coluna direita (ocupa toda a altura)
-    _insp_tbl = Table([
-        [_ph_cab("INSPECTION",       sz=11)],
-        [_ph_cab("CERTIFICATE",      sz=11)],
-        [Spacer(1, 2*mm)],
-        [_ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False)],
-    ], colWidths=[_W_DIREITA - 2*mm],
-       rowHeights=[8*mm, 8*mm, 4*mm, 6*mm])
-    _insp_tbl.setStyle(TableStyle([
-        ("VALIGN",  (0,0),(-1,-1), "MIDDLE"),
-        ("ALIGN",   (0,0),(-1,-1), "CENTER"),
-        ("TOPPADDING",   (0,0),(-1,-1), 1),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 1),
-    ]))
+    _H_TOPO   = _H_LOGO_MAX + 2*mm   # altura da linha 0 (logo + margem)
+    _H_BAIXO  = 16*mm                 # altura da linha 1 (titulo + numero)
+
+    # Celula esquerda linha 0: logo centralizado
+    _cel_esq_0 = _logo_cell
+
+    # Celula direita linha 0: INSPECTION CERTIFICATE SFS empilhados
+    _cel_dir_0 = [
+        _ph_cab("INSPECTION",           sz=11),
+        _ph_cab("CERTIFICATE",          sz=11),
+        Spacer(1, 2*mm),
+        _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False),
+    ]
+
+    # Celula esquerda linha 1: titulo + numero (2 paragrafos)
+    _cel_esq_1 = [
+        _ph_cab("Certificado de Qualidade / Quality Certificate", sz=9),
+        _ph_cab(f"N\u00ba {num_cert}", sz=16),
+    ]
 
     cab = Table([
-        [_logo_cell,          _insp_tbl],
-        [_ph_cab("Certificado de Qualidade / Quality Certificate", sz=9), ""],
-        [_ph_cab(f"N\u00ba {num_cert}", sz=16), ""],
+        [_cel_esq_0, _cel_dir_0],
+        [_cel_esq_1, ""],
     ], colWidths=[_W_ESQUERDA, _W_DIREITA],
-       rowHeights=[_H_LOGO, _H_TITULO, _H_NUM])
+       rowHeights=[_H_TOPO, _H_BAIXO])
 
     cab.setStyle(TableStyle([
-        # Borda externa
         ("BOX",         (0,0),(-1,-1), 0.8, BK),
-        # Linha vertical separando INSPECTION em TODAS as linhas (0,1,2)
-        ("LINEBEFORE",  (1,0),(1,2),   0.8, BK),
-        # Mescla coluna direita linhas 1 e 2 — fica em branco (só linha 0 tem conteúdo)
-        ("SPAN",        (1,1),(1,2)),
-        ("BACKGROUND",  (1,1),(1,2),   colors.white),
-        # Remove bordas internas da coluna direita nas linhas 1 e 2
-        ("LINEABOVE",   (1,1),(1,2),   0, colors.white),
-        ("LINEBELOW",   (1,1),(1,2),   0, colors.white),
+        # Linha vertical separando col direita — apenas na linha 0
+        ("LINEBEFORE",  (1,0),(1,0),   0.8, BK),
+        # Linha horizontal completa separando linha 0 de linha 1
+        ("LINEBELOW",   (0,0),(-1,0),  0.5, BK),
+        # Celula direita linha 1 fica em branco sem bordas internas
+        ("SPAN",        (1,1),(1,1)),
+        ("BACKGROUND",  (1,1),(1,1),   colors.white),
+        ("LINEBEFORE",  (1,1),(1,1),   0,   colors.white),
         # Alinhamentos
         ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
+        ("VALIGN",      (1,0),(1,0),   "TOP"),
         ("ALIGN",       (0,0),(-1,-1), "CENTER"),
-        ("TOPPADDING",  (0,0),(-1,-1), 2),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-        # Linha horizontal COMPLETA (col 0 e col 1) abaixo da linha do titulo
-        ("LINEBELOW",   (0,1),(0,1),   0.5, BK),
+        ("TOPPADDING",  (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+        ("TOPPADDING",  (1,0),(1,0),   5),
     ]))
     story.append(cab)
 
