@@ -1545,6 +1545,7 @@ def pagina_relatorios() -> None:
             for c in corridas:
                 comp = c.composicao_quimica_pct or {}
                 row = {
+                    "_id":          c.id,
                     "Corrida":      c.numero_corrida or "",
                     "Data fusão":   _exibir_data_br(c.data_fusao),
                     "Cliente":      c.nome_cliente or "",
@@ -1603,22 +1604,16 @@ def pagina_relatorios() -> None:
                 "Norma":        st.column_config.TextColumn("Norma",         width="medium"),
             })
 
-            # Guarda ids das corridas na mesma ordem do df
-            _ids_corr = [c.id for c in corridas]
-            # Reordena os ids junto com o df
-            if "Corrida" in df.columns and "Data fusão" in df.columns:
-                _df_ids = pd.DataFrame({"_id": [c.id for c in corridas], "Corrida": [c.numero_corrida or "" for c in corridas], "Data fusão": [_exibir_data_br(c.data_fusao) for c in corridas]})
-                _df_ids["_sort_data"] = pd.to_datetime(_df_ids["Data fusão"], format="%d/%m/%Y", errors="coerce")
-                _df_ids["_sort_c"]    = _df_ids["Corrida"].apply(_chave_of)
-                _df_ids = _df_ids.sort_values(by=["_sort_data","_sort_c"], ascending=[True,True]).reset_index(drop=True)
-                _ids_corr_ord = _df_ids["_id"].tolist()
-            else:
-                _ids_corr_ord = _ids_corr
+            # IDs ficam no df na mesma ordem — sem necessidade de reordenar separado
+            _ids_corr_ord = df["_id"].tolist()
+
+            # Remove coluna _id do display
+            df_display = df.drop(columns=["_id"])
 
             st.caption("Clique no ☐ à esquerda da linha para selecionar uma corrida e usar as opções abaixo.")
             _altura_corr = st.slider("Altura da tabela (px)", min_value=200, max_value=1400, value=400, step=50, key="altura_corr")
             sel_corr = st.dataframe(
-                df,
+                df_display,
                 height=_altura_corr,
                 use_container_width=True,
                 hide_index=True,
@@ -1629,7 +1624,7 @@ def pagina_relatorios() -> None:
             )
 
             buf = StringIO()
-            df.to_csv(buf, index=False)
+            df_display.to_csv(buf, index=False)
             st.download_button(
                 "⬇️ Baixar CSV — corridas", buf.getvalue(),
                 file_name="relatorio_corridas.csv", mime="text/csv"
