@@ -409,6 +409,12 @@ def pagina_dashboard():
     else:
         _df_dash = _df_of_formatado(linhas_abertas)
 
+        # Ordena pela chave da OF crescente
+        if "Nº OF" in _df_dash.columns:
+            _df_dash["_sort_of"] = _df_dash["Nº OF"].fillna("").apply(_chave_of)
+            _df_dash = _df_dash.sort_values("_sort_of", ascending=True, na_position="last")\
+                               .drop(columns=["_sort_of"]).reset_index(drop=True)
+
         # Aplica estilo visual para OFs Canceladas
         def _style_canceladas(row):
             if row.get("Status") == "Cancelada":
@@ -1352,19 +1358,14 @@ def pagina_relatorios() -> None:
 
             df = _df_of_formatado(rows)
 
-            # Ordena: 1º pelo ANO de abertura (ignora dia e mês), 2º pela chave alfanumérica da OF
-            # "dev" é ignorado na chave. Resultado: OFs do ano mais antigo primeiro,
-            # dentro do mesmo ano segue 001A6, 002A6... 001B6... 001K9...
-            if "Nº OF" in df.columns and "Abertura" in df.columns:
-                df["_sort_ano"] = pd.to_datetime(
-                    df["Abertura"], format="%d/%m/%Y", errors="coerce"
-                ).dt.year.fillna(9999).astype(int)
+            # Ordena pela chave da OF (já contém ano, mês e sequência) — crescente
+            if "Nº OF" in df.columns:
                 df["_sort_of"] = df["Nº OF"].fillna("").apply(_chave_of)
                 df = df.sort_values(
-                    by=["_sort_ano", "_sort_of"],
-                    ascending=[False, False],
+                    by=["_sort_of"],
+                    ascending=[True],
                     na_position="last",
-                ).drop(columns=["_sort_ano", "_sort_of"]).reset_index(drop=True)
+                ).drop(columns=["_sort_of"]).reset_index(drop=True)
 
             # Rótulos em português e larguras por tipo de campo
             # Últimas colunas com width="large" para garantir visualização completa
