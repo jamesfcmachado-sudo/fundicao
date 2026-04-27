@@ -1480,13 +1480,27 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     story.append(Spacer(1, 2*mm))
 
     # ── COMPOSIÇÃO QUÍMICA ────────────────────────────────────────────────────
-    ELEM = ["C","Si","Mn","P","S","Cr","Ni","Mo"]
+    # Verifica quais elementos extras estao preenchidos (Cu, V, etc)
+    _elem_extras = []
+    for _ek in ["cu","v","w","nb","b","n","mg","co"]:
+        for _corr in corridas:
+            _cm_chk = _corr._mapping if hasattr(_corr, "_mapping") else {}
+            if _cm_chk.get(_ek, 0):
+                _elem_extras.append(_ek)
+                break
 
-    # Cabecalho identico ao template: OF | CORRIDA / HEAT No | elementos
-    # Linha 1: "OF"(span2) | "CORRIDA" | C | Si | Mn | P | S | Cr | Ni | Mo
-    # Linha 2: "OF"(span2) | "HEAT No" | (elementos sem cabecalho)
-    # Simulado com 2 linhas de header e SPAN na coluna OF
-    cw_c = [20*mm, 22*mm] + [(W-42*mm)/8]*8
+    ELEM = ["C","Si","Mn","P","S","Cr","Ni","Mo"]
+    ELEM_KEYS = ["c","si","mn","p","s","cr","ni","mo"]
+    # Adiciona extras se existirem
+    for _ek in _elem_extras:
+        ELEM.append(_ek.upper())
+        ELEM_KEYS.append(_ek)
+
+    _n_elem = len(ELEM)
+    _w_of   = 20*mm
+    _w_corr = 22*mm
+    _w_elem = (W - _w_of - _w_corr) / _n_elem
+    cw_c = [_w_of, _w_corr] + [_w_elem]*_n_elem
 
     comp_hdr1 = [ph("OF"), ph("CORRIDA")] + [ph(e) for e in ELEM]
     comp_hdr2 = [ph(""),   ph("HEAT Nº")] + [ph("") for _ in ELEM]
@@ -1497,12 +1511,12 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         _nof   = str(_cm.get("numero_of","") or "")
         _ncorr = str(_cm.get("numero_corrida","") or "")
         row = [pc(_nof), pc(_ncorr)]
-        for ek in ["c","si","mn","p","s","cr","ni","mo"]:
+        for ek in ELEM_KEYS:
             row.append(pc(fmt_num(_cm.get(ek, 0))))
         comp_rows.append(row)
 
     while len(comp_rows) < 10:
-        comp_rows.append([""] * 10)
+        comp_rows.append([""] * (2 + _n_elem))
 
     # Altura das linhas
     _n_corr = len(corridas)
@@ -1579,10 +1593,10 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         story.append(Spacer(1, 2*mm))
 
     # ── ITENS ────────────────────────────────────────────────────────────────
-    it_hdr = [ph("Pedido/Item\nP.O."), ph("Modelo\nPattern"),
-              ph("Descrição\nDescription"),
-              ph("Séries\nSeries"), ph("Quantidade\nQuantity")]
-    it_rows = [it_hdr]
+    # Cabecalho em 2 linhas identico ao template
+    it_hdr1 = [ph("Pedido/Item"), ph("Modelo"),    ph("Descrição"),       ph("Séries"),  ph("Quantidade")]
+    it_hdr2 = [ph("P.O."),        ph("Pattern"),   ph("Description"),     ph("Series"),  ph("Quantity")]
+    it_rows = [it_hdr1, it_hdr2]
     for it in itens:
         im = it._mapping if hasattr(it,"_mapping") else it
         it_rows.append([
@@ -1592,7 +1606,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
             pc(im.get("series","")),
             pc(str(im.get("quantidade",""))),
         ])
-    while len(it_rows) < 9:
+    while len(it_rows) < 10:
         it_rows.append(["","","","",""])
 
     tit_it = Table([[ph("II - OUTROS DADOS / OTHER INFORMATIONS")]],
@@ -1603,17 +1617,20 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         ("TOPPADDING", (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
     ]))
-    it_tbl = Table(it_rows, colWidths=[W*0.20, W*0.14, W*0.37, W*0.15, W*0.14])
+    _it_row_h = [5*mm, 5*mm] + [7*mm]*len(itens) + [6*mm]*(8-len(itens))
+    it_tbl = Table(it_rows, colWidths=[W*0.20, W*0.14, W*0.37, W*0.15, W*0.14],
+                   rowHeights=_it_row_h[:len(it_rows)])
     it_tbl.setStyle(TableStyle([
-        ("BACKGROUND",   (0,0),(-1,0), CINZA),
+        ("BACKGROUND",   (0,0),(-1,1), CINZA),
+        ("FONTNAME",     (0,0),(-1,1), "Helvetica-Bold"),
         ("GRID",         (0,0),(-1,-1), 0.4, BK),
         ("FONTSIZE",     (0,0),(-1,-1), 7),
         ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
         ("ALIGN",        (0,0),(1,-1), "CENTER"),
         ("ALIGN",        (2,0),(2,-1), "LEFT"),
         ("ALIGN",        (3,0),(-1,-1), "CENTER"),
-        ("TOPPADDING",   (0,0),(-1,-1), 2),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+        ("TOPPADDING",   (0,0),(-1,-1), 1),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 1),
         ("LEFTPADDING",  (2,0),(2,-1), 3),
     ]))
     story.append(tit_it)
