@@ -1404,14 +1404,15 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
 
     # Celula direita linha 0: INSPECTION CERTIFICATE SFS empilhados
     _cel_dir_0 = [
-        _ph_cab("INSPECTION",           sz=11),
-        _ph_cab("CERTIFICATE",          sz=11),
+        Spacer(1, 4*mm),
+        _ph_cab("INSPECTION",           sz=10),
+        _ph_cab("CERTIFICATE",          sz=10),
         Spacer(1, 2*mm),
         _ph_cab("SFS - EM 10204 - 3.1", sz=7, bold=False),
     ]
 
     # Celula esquerda linha 1: apenas numero do certificado
-    _cel_esq_1 = _ph_cab(f"N\u00ba {num_cert}", sz=16)
+    _cel_esq_1 = _ph_cab(f"N\u00ba {num_cert}", sz=13)
 
     cab = Table([
         [_cel_esq_0, _cel_dir_0],
@@ -1431,7 +1432,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         ("LINEBEFORE",  (1,1),(1,1),   0,   colors.white),
         # Alinhamentos
         ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
-        ("VALIGN",      (1,0),(1,0),   "TOP"),
+        ("VALIGN",      (1,0),(1,0),   "MIDDLE"),
         ("ALIGN",       (0,0),(-1,-1), "CENTER"),
         ("TOPPADDING",  (0,0),(-1,-1), 3),
         ("BOTTOMPADDING",(0,0),(-1,-1), 3),
