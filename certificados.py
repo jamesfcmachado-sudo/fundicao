@@ -1392,8 +1392,8 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     # Linha horizontal separa linha 0 de linha 1
     # BOX fecha tudo por fora
 
-    _H_TOPO   = _H_LOGO_MAX + 2*mm   # altura da linha 0 (logo + margem)
-    _H_BAIXO  = 16*mm                 # altura da linha 1 (titulo + numero)
+    _H_TOPO   = _H_LOGO_MAX + 9*mm   # logo + titulo
+    _H_BAIXO  = 11*mm                 # numero sozinho
 
     # Celula esquerda linha 0: logo + titulo abaixo do logo
     _cel_esq_0 = [
