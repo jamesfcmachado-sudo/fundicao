@@ -1563,7 +1563,7 @@ def pagina_relatorios() -> None:
 
             df = pd.DataFrame(rows)
 
-            # Configuração de colunas: largura adequada para cada campo
+            # Configuração de colunas
             col_config = {
                 "Corrida":     st.column_config.TextColumn("Corrida",    width="small"),
                 "Data fusão":  st.column_config.TextColumn("Data fusão", width="small"),
@@ -1578,6 +1578,12 @@ def pagina_relatorios() -> None:
             for elem in _ELEM_SEQ:
                 col_config[elem] = st.column_config.NumberColumn(
                     elem, width="small", format="%.4f"
+                )
+
+            # Centraliza Qtd fundida convertendo para texto
+            if "Qtd fundida" in df.columns:
+                df["Qtd fundida"] = df["Qtd fundida"].apply(
+                    lambda x: str(int(x)) if pd.notna(x) and x != 0 else ""
                 )
 
             # Ordena: 1º pela data de fusão (mais antiga primeiro), 2º pela chave alfanumérica
