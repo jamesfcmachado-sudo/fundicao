@@ -3,6 +3,7 @@ certificados.py
 ===============
 Módulo de Certificados de Qualidade para o sistema de controle de fundição.
 Inclui: criação, consulta, ensaios mecânicos e geração de PDF.
+v2026.04.26
 """
 from __future__ import annotations
 import io
