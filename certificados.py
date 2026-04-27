@@ -1414,19 +1414,23 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
        rowHeights=[_H_LOGO, _H_TITULO, _H_NUM])
 
     cab.setStyle(TableStyle([
+        # Borda externa
         ("BOX",         (0,0),(-1,-1), 0.8, BK),
-        # Linha vertical separando coluna INSPECTION
-        ("LINEBEFORE",  (1,0),(1,0),   0.8, BK),
-        # Mescla coluna direita linhas 1 e 2 (titulo e numero ficam so na col esquerda)
+        # Linha vertical separando INSPECTION em TODAS as linhas (0,1,2)
+        ("LINEBEFORE",  (1,0),(1,2),   0.8, BK),
+        # Mescla coluna direita linhas 1 e 2 — fica em branco (só linha 0 tem conteúdo)
         ("SPAN",        (1,1),(1,2)),
+        ("BACKGROUND",  (1,1),(1,2),   colors.white),
+        # Remove bordas internas da coluna direita nas linhas 1 e 2
+        ("LINEABOVE",   (1,1),(1,2),   0, colors.white),
+        ("LINEBELOW",   (1,1),(1,2),   0, colors.white),
+        # Alinhamentos
         ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
         ("ALIGN",       (0,0),(-1,-1), "CENTER"),
         ("TOPPADDING",  (0,0),(-1,-1), 2),
         ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-        # Linha horizontal atravessando TODA largura apos a linha do titulo (linha 1)
-        ("LINEBELOW",   (0,1),(-1,1),  0.5, BK),
-        # Fundo branco nas celulas vazias do span
-        ("BACKGROUND",  (1,1),(1,2),   colors.white),
+        # Linha horizontal COMPLETA (col 0 e col 1) abaixo da linha do titulo
+        ("LINEBELOW",   (0,1),(0,1),   0.5, BK),
     ]))
     story.append(cab)
 
