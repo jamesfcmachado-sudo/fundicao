@@ -4101,7 +4101,7 @@ def pagina_consulta_oes():
                         ''                           AS nota_fiscal
                     FROM oe_item i
                     LEFT JOIN ordem_fabricacao of ON of.numero_of = i.num_of
-                    ORDER BY i.numero_oe ASC, i.criado_em ASC
+                    ORDER BY i.numero_oe DESC, i.criado_em DESC
                 """
                 rows = _conn.execute(_text(_sql_item)).fetchall()
             else:
@@ -4125,7 +4125,7 @@ def pagina_consulta_oes():
                         '' AS transportadora, '' AS nota_fiscal
                     FROM ordem_entrega oe
                     JOIN ordem_fabricacao of ON of.id = oe.ordem_fabricacao_id
-                    ORDER BY oe.criado_em ASC
+                    ORDER BY oe.criado_em DESC
                 """
                 rows = _conn.execute(_text(_sql_oe)).fetchall()
 
