@@ -409,7 +409,7 @@ def pagina_dashboard():
     else:
         _df_dash = _df_of_formatado(linhas_abertas)
 
-        # Ordena decrescente — OFs mais recentes primeiro
+        # Ordena crescente — OFs mais antigas primeiro
         if "Nº OF" in _df_dash.columns:
             _df_dash[["_s_ano","_s_mes","_s_seq","_s_cod"]] = pd.DataFrame(
                 _df_dash["Nº OF"].fillna("").apply(_chave_of).tolist(),
@@ -417,7 +417,7 @@ def pagina_dashboard():
             )
             _df_dash = _df_dash.sort_values(
                 by=["_s_ano","_s_mes","_s_seq"],
-                ascending=[False, False, False],
+                ascending=[True, True, True],
                 na_position="last"
             ).drop(columns=["_s_ano","_s_mes","_s_seq","_s_cod","_id"], errors="ignore")\
              .reset_index(drop=True)
@@ -448,20 +448,7 @@ def pagina_dashboard():
         _btn1, _btn2 = st.columns(2)
         with _btn1:
             try:
-                # PDF sempre em ordem crescente (mais antigas primeiro)
-                _df_pdf = _df_dash.copy()
-                if "Nº OF" in _df_pdf.columns:
-                    _df_pdf[["_s_ano","_s_mes","_s_seq","_s_cod"]] = pd.DataFrame(
-                        _df_pdf["Nº OF"].fillna("").apply(_chave_of).tolist(),
-                        index=_df_pdf.index
-                    )
-                    _df_pdf = _df_pdf.sort_values(
-                        by=["_s_ano","_s_mes","_s_seq"],
-                        ascending=[True, True, True],
-                        na_position="last"
-                    ).drop(columns=["_s_ano","_s_mes","_s_seq","_s_cod"], errors="ignore")\
-                     .reset_index(drop=True)
-                _pdf_bytes = _gerar_pdf_ofs(_df_pdf)
+                _pdf_bytes = _gerar_pdf_ofs(_df_dash)
                 st.download_button(
                     "📄 Baixar PDF",
                     data=_pdf_bytes,
@@ -4114,7 +4101,7 @@ def pagina_consulta_oes():
                         ''                           AS nota_fiscal
                     FROM oe_item i
                     LEFT JOIN ordem_fabricacao of ON of.numero_of = i.num_of
-                    ORDER BY i.numero_oe DESC, i.criado_em DESC
+                    ORDER BY i.numero_oe ASC, i.criado_em ASC
                 """
                 rows = _conn.execute(_text(_sql_item)).fetchall()
             else:
@@ -4138,7 +4125,7 @@ def pagina_consulta_oes():
                         '' AS transportadora, '' AS nota_fiscal
                     FROM ordem_entrega oe
                     JOIN ordem_fabricacao of ON of.id = oe.ordem_fabricacao_id
-                    ORDER BY oe.criado_em DESC
+                    ORDER BY oe.criado_em ASC
                 """
                 rows = _conn.execute(_text(_sql_oe)).fetchall()
 
