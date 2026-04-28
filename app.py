@@ -409,7 +409,7 @@ def pagina_dashboard():
     else:
         _df_dash = _df_of_formatado(linhas_abertas)
 
-        # Ordena pela chave da OF — decrescente (mais recentes primeiro)
+        # Ordena crescente (mais antigas primeiro) mas mostra o final da lista
         if "Nº OF" in _df_dash.columns:
             _df_dash[["_s_ano","_s_mes","_s_seq","_s_cod"]] = pd.DataFrame(
                 _df_dash["Nº OF"].fillna("").apply(_chave_of).tolist(),
@@ -417,7 +417,7 @@ def pagina_dashboard():
             )
             _df_dash = _df_dash.sort_values(
                 by=["_s_ano","_s_mes","_s_seq"],
-                ascending=[False, False, False],
+                ascending=[True, True, True],
                 na_position="last"
             ).drop(columns=["_s_ano","_s_mes","_s_seq","_s_cod","_id"], errors="ignore")\
              .reset_index(drop=True)
@@ -444,6 +444,15 @@ def pagina_dashboard():
             hide_index=True,
             column_config=_DASH_COL_CFG,
         )
+        # Scroll automático para o final da tabela (mostra OFs mais recentes)
+        st.components.v1.html("""
+            <script>
+                setTimeout(function() {
+                    var tables = window.parent.document.querySelectorAll('.stDataFrame [data-testid="StyledDataFrameDataGrid"]');
+                    tables.forEach(function(t) { t.scrollTop = t.scrollHeight; });
+                }, 800);
+            </script>
+        """, height=0)
 
         _btn1, _btn2 = st.columns(2)
         with _btn1:
