@@ -409,7 +409,7 @@ def pagina_dashboard():
     else:
         _df_dash = _df_of_formatado(linhas_abertas)
 
-        # Ordena crescente (mais antigas primeiro) mas mostra o final da lista
+        # Ordena decrescente — OFs mais recentes primeiro
         if "Nº OF" in _df_dash.columns:
             _df_dash[["_s_ano","_s_mes","_s_seq","_s_cod"]] = pd.DataFrame(
                 _df_dash["Nº OF"].fillna("").apply(_chave_of).tolist(),
@@ -417,7 +417,7 @@ def pagina_dashboard():
             )
             _df_dash = _df_dash.sort_values(
                 by=["_s_ano","_s_mes","_s_seq"],
-                ascending=[True, True, True],
+                ascending=[False, False, False],
                 na_position="last"
             ).drop(columns=["_s_ano","_s_mes","_s_seq","_s_cod","_id"], errors="ignore")\
              .reset_index(drop=True)
@@ -444,20 +444,24 @@ def pagina_dashboard():
             hide_index=True,
             column_config=_DASH_COL_CFG,
         )
-        # Scroll automático para o final da tabela (mostra OFs mais recentes)
-        st.components.v1.html("""
-            <script>
-                setTimeout(function() {
-                    var tables = window.parent.document.querySelectorAll('.stDataFrame [data-testid="StyledDataFrameDataGrid"]');
-                    tables.forEach(function(t) { t.scrollTop = t.scrollHeight; });
-                }, 800);
-            </script>
-        """, height=0)
 
         _btn1, _btn2 = st.columns(2)
         with _btn1:
             try:
-                _pdf_bytes = _gerar_pdf_ofs(_df_dash)
+                # PDF sempre em ordem crescente (mais antigas primeiro)
+                _df_pdf = _df_dash.copy()
+                if "Nº OF" in _df_pdf.columns:
+                    _df_pdf[["_s_ano","_s_mes","_s_seq","_s_cod"]] = pd.DataFrame(
+                        _df_pdf["Nº OF"].fillna("").apply(_chave_of).tolist(),
+                        index=_df_pdf.index
+                    )
+                    _df_pdf = _df_pdf.sort_values(
+                        by=["_s_ano","_s_mes","_s_seq"],
+                        ascending=[True, True, True],
+                        na_position="last"
+                    ).drop(columns=["_s_ano","_s_mes","_s_seq","_s_cod"], errors="ignore")\
+                     .reset_index(drop=True)
+                _pdf_bytes = _gerar_pdf_ofs(_df_pdf)
                 st.download_button(
                     "📄 Baixar PDF",
                     data=_pdf_bytes,
