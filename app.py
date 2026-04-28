@@ -409,11 +409,18 @@ def pagina_dashboard():
     else:
         _df_dash = _df_of_formatado(linhas_abertas)
 
-        # Ordena pela chave da OF crescente
+        # Ordena pela chave da OF — decrescente (mais recentes primeiro)
         if "Nº OF" in _df_dash.columns:
-            _df_dash["_sort_of"] = _df_dash["Nº OF"].fillna("").apply(_chave_of)
-            _df_dash = _df_dash.sort_values("_sort_of", ascending=False, na_position="last")\
-                               .drop(columns=["_sort_of"]).reset_index(drop=True)
+            _df_dash[["_s_ano","_s_mes","_s_seq","_s_cod"]] = pd.DataFrame(
+                _df_dash["Nº OF"].fillna("").apply(_chave_of).tolist(),
+                index=_df_dash.index
+            )
+            _df_dash = _df_dash.sort_values(
+                by=["_s_ano","_s_mes","_s_seq"],
+                ascending=[False, False, False],
+                na_position="last"
+            ).drop(columns=["_s_ano","_s_mes","_s_seq","_s_cod","_id"], errors="ignore")\
+             .reset_index(drop=True)
 
         # Aplica estilo visual para OFs Canceladas
         def _style_canceladas(row):
@@ -1358,14 +1365,18 @@ def pagina_relatorios() -> None:
 
             df = _df_of_formatado(rows)
 
-            # Ordena pela chave da OF (já contém ano, mês e sequência) — crescente
+            # Ordena pela chave da OF — decrescente (mais recentes primeiro)
             if "Nº OF" in df.columns:
-                df["_sort_of"] = df["Nº OF"].fillna("").apply(_chave_of)
+                df[["_s_ano","_s_mes","_s_seq","_s_cod"]] = pd.DataFrame(
+                    df["Nº OF"].fillna("").apply(_chave_of).tolist(),
+                    index=df.index
+                )
                 df = df.sort_values(
-                    by=["_sort_of"],
-                    ascending=[False],
+                    by=["_s_ano","_s_mes","_s_seq"],
+                    ascending=[False, False, False],
                     na_position="last",
-                ).drop(columns=["_sort_of"]).reset_index(drop=True)
+                ).drop(columns=["_s_ano","_s_mes","_s_seq","_s_cod"], errors="ignore")\
+                 .reset_index(drop=True)
 
             # Rótulos em português e larguras por tipo de campo
             # Últimas colunas com width="large" para garantir visualização completa
