@@ -844,7 +844,10 @@ def pagina_lancar_corrida() -> None:
             with l5c6:
                 st.number_input(_els[17], min_value=0.0, value=float(_corr_comp_auto.get(_els[17], 0.0)), format="%.4f", key=f"chem_{_els[17]}")
 
-        enviar = st.form_submit_button("Salvar corrida")
+        # Campo invisível para absorver o Enter e evitar submit acidental
+        st.text_input(".", value="", label_visibility="collapsed", key="_absorve_enter_corrida")
+
+        enviar = st.form_submit_button("💾 Salvar corrida", type="primary")
 
     if not enviar:
         return
