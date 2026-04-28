@@ -412,7 +412,7 @@ def pagina_dashboard():
         # Ordena pela chave da OF crescente
         if "Nº OF" in _df_dash.columns:
             _df_dash["_sort_of"] = _df_dash["Nº OF"].fillna("").apply(_chave_of)
-            _df_dash = _df_dash.sort_values("_sort_of", ascending=True, na_position="last")\
+            _df_dash = _df_dash.sort_values("_sort_of", ascending=False, na_position="last")\
                                .drop(columns=["_sort_of"]).reset_index(drop=True)
 
         # Aplica estilo visual para OFs Canceladas
@@ -1071,7 +1071,7 @@ def pagina_consulta_rastreabilidade() -> None:
                 ).dt.year.fillna(9999).astype(int)
                 _df_rast["_sort_of"] = _df_rast["Nº OF"].fillna("").apply(_chave_of)
                 _df_rast = _df_rast.sort_values(
-                    by=["_sort_ano", "_sort_of"], ascending=[True, True], na_position="last"
+                    by=["_sort_ano", "_sort_of"], ascending=[False, False], na_position="last"
                 ).drop(columns=["_sort_ano", "_sort_of"]).reset_index(drop=True)
 
             # Mesma configuração de colunas do relatório
@@ -1236,7 +1236,7 @@ def pagina_consulta_corridas() -> None:
                 )
                 _df_cc["_sort_c"] = _df_cc["Corrida"].fillna("").apply(_chave_of)
                 _df_cc = _df_cc.sort_values(
-                    by=["_sort_data", "_sort_c"], ascending=[True, True], na_position="last"
+                    by=["_sort_data", "_sort_c"], ascending=[False, False], na_position="last"
                 ).drop(columns=["_sort_data", "_sort_c"]).reset_index(drop=True)
 
             # Mesma configuração de colunas do relatório de corridas
@@ -1363,7 +1363,7 @@ def pagina_relatorios() -> None:
                 df["_sort_of"] = df["Nº OF"].fillna("").apply(_chave_of)
                 df = df.sort_values(
                     by=["_sort_of"],
-                    ascending=[True],
+                    ascending=[False],
                     na_position="last",
                 ).drop(columns=["_sort_of"]).reset_index(drop=True)
 
