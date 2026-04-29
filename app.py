@@ -917,14 +917,14 @@ def pagina_lancar_corrida() -> None:
             db.flush()
             db.refresh(corrida)
 
-            # Atualiza qtd_pecas_fundidas na OF somando a quantidade da corrida
+            # Atualiza qtd_fundida na OF somando a quantidade da corrida
             if of_id and int(qtd_fundidas) > 0:
                 _of_atualizar = db.scalar(
                     select(OrdemFabricacao).where(OrdemFabricacao.id == of_id)
                 )
                 if _of_atualizar:
-                    _qtd_atual = int(_of_atualizar.qtd_pecas_fundidas or 0)
-                    _of_atualizar.qtd_pecas_fundidas = _qtd_atual + int(qtd_fundidas)
+                    _qtd_atual = int(_of_atualizar.qtd_fundida or 0)
+                    _of_atualizar.qtd_fundida = _qtd_atual + int(qtd_fundidas)
 
         st.success(f"Corrida **{corrida.numero_corrida}** registrada com sucesso!")
         if of_id and int(qtd_fundidas) > 0:
