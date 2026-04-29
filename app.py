@@ -1550,6 +1550,21 @@ def pagina_relatorios() -> None:
                                                         _of_save.condicao_modelo    = _cond.strip() or None
                                                         _of_save.observacoes        = _obs.strip() or None
                                                         _of_save.atualizado_em      = datetime.now().astimezone()
+
+                                                        # Atualiza em cascata nas corridas vinculadas
+                                                        _corridas_vinc = _db_save.execute(
+                                                            select(Corrida).where(
+                                                                Corrida.numero_ordem_fabricacao == _nof_sel
+                                                            )
+                                                        ).scalars().all()
+                                                        for _corr_v in _corridas_vinc:
+                                                            if _cliente.strip():
+                                                                _corr_v.nome_cliente = _cliente.strip()
+                                                            if _liga.strip():
+                                                                _corr_v.liga = _liga.strip()
+                                                            if _norma.strip():
+                                                                _corr_v.norma = _norma.strip()
+                                                            _corr_v.atualizado_em = datetime.now().astimezone()
                                                     if _acao == "finalizar":
                                                         _of_save.status_of = "Finalizada"
                                                         # UPDATE direto via SQL para garantir gravação
