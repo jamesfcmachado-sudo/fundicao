@@ -854,46 +854,46 @@ def pagina_lancar_corrida() -> None:
         else:
             _els = ELEMENTOS_QUIMICOS
             with l3c1:
-                st.number_input(_els[0], min_value=0.0, value=float(_corr_comp_auto.get(_els[0], 0.0)), format="%.4f", key=f"chem_{_els[0]}")
+                st.number_input(_els[0], min_value=0.0, value=float(_corr_comp_auto.get(_els[0], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[0]}")
             with l3c2:
-                st.number_input(_els[1], min_value=0.0, value=float(_corr_comp_auto.get(_els[1], 0.0)), format="%.4f", key=f"chem_{_els[1]}")
+                st.number_input(_els[1], min_value=0.0, value=float(_corr_comp_auto.get(_els[1], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[1]}")
             with l3c3:
-                st.number_input(_els[2], min_value=0.0, value=float(_corr_comp_auto.get(_els[2], 0.0)), format="%.4f", key=f"chem_{_els[2]}")
+                st.number_input(_els[2], min_value=0.0, value=float(_corr_comp_auto.get(_els[2], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[2]}")
             with l3c4:
-                st.number_input(_els[3], min_value=0.0, value=float(_corr_comp_auto.get(_els[3], 0.0)), format="%.4f", key=f"chem_{_els[3]}")
+                st.number_input(_els[3], min_value=0.0, value=float(_corr_comp_auto.get(_els[3], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[3]}")
             with l3c5:
-                st.number_input(_els[4], min_value=0.0, value=float(_corr_comp_auto.get(_els[4], 0.0)), format="%.4f", key=f"chem_{_els[4]}")
+                st.number_input(_els[4], min_value=0.0, value=float(_corr_comp_auto.get(_els[4], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[4]}")
             with l3c6:
-                st.number_input(_els[5], min_value=0.0, value=float(_corr_comp_auto.get(_els[5], 0.0)), format="%.4f", key=f"chem_{_els[5]}")
+                st.number_input(_els[5], min_value=0.0, value=float(_corr_comp_auto.get(_els[5], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[5]}")
 
         if not usar_json:
             l4c1, l4c2, l4c3, l4c4, l4c5, l4c6 = st.columns(6)
             with l4c1:
-                st.number_input(_els[6], min_value=0.0, value=float(_corr_comp_auto.get(_els[6], 0.0)), format="%.4f", key=f"chem_{_els[6]}")
+                st.number_input(_els[6], min_value=0.0, value=float(_corr_comp_auto.get(_els[6], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[6]}")
             with l4c2:
-                st.number_input(_els[7], min_value=0.0, value=float(_corr_comp_auto.get(_els[7], 0.0)), format="%.4f", key=f"chem_{_els[7]}")
+                st.number_input(_els[7], min_value=0.0, value=float(_corr_comp_auto.get(_els[7], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[7]}")
             with l4c3:
-                st.number_input(_els[8], min_value=0.0, value=float(_corr_comp_auto.get(_els[8], 0.0)), format="%.4f", key=f"chem_{_els[8]}")
+                st.number_input(_els[8], min_value=0.0, value=float(_corr_comp_auto.get(_els[8], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[8]}")
             with l4c4:
-                st.number_input(_els[9], min_value=0.0, value=float(_corr_comp_auto.get(_els[9], 0.0)), format="%.4f", key=f"chem_{_els[9]}")
+                st.number_input(_els[9], min_value=0.0, value=float(_corr_comp_auto.get(_els[9], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[9]}")
             with l4c5:
-                st.number_input(_els[10], min_value=0.0, value=float(_corr_comp_auto.get(_els[10], 0.0)), format="%.4f", key=f"chem_{_els[10]}")
+                st.number_input(_els[10], min_value=0.0, value=float(_corr_comp_auto.get(_els[10], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[10]}")
             with l4c6:
-                st.number_input(_els[11], min_value=0.0, value=float(_corr_comp_auto.get(_els[11], 0.0)), format="%.4f", key=f"chem_{_els[11]}")
+                st.number_input(_els[11], min_value=0.0, value=float(_corr_comp_auto.get(_els[11], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[11]}")
 
             l5c1, l5c2, l5c3, l5c4, l5c5, l5c6 = st.columns(6)
             with l5c1:
-                st.number_input(_els[12], min_value=0.0, value=float(_corr_comp_auto.get(_els[12], 0.0)), format="%.4f", key=f"chem_{_els[12]}")
+                st.number_input(_els[12], min_value=0.0, value=float(_corr_comp_auto.get(_els[12], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[12]}")
             with l5c2:
-                st.number_input(_els[13], min_value=0.0, value=float(_corr_comp_auto.get(_els[13], 0.0)), format="%.4f", key=f"chem_{_els[13]}")
+                st.number_input(_els[13], min_value=0.0, value=float(_corr_comp_auto.get(_els[13], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[13]}")
             with l5c3:
-                st.number_input(_els[14], min_value=0.0, value=float(_corr_comp_auto.get(_els[14], 0.0)), format="%.4f", key=f"chem_{_els[14]}")
+                st.number_input(_els[14], min_value=0.0, value=float(_corr_comp_auto.get(_els[14], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[14]}")
             with l5c4:
-                st.number_input(_els[15], min_value=0.0, value=float(_corr_comp_auto.get(_els[15], 0.0)), format="%.4f", key=f"chem_{_els[15]}")
+                st.number_input(_els[15], min_value=0.0, value=float(_corr_comp_auto.get(_els[15], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[15]}")
             with l5c5:
-                st.number_input(_els[16], min_value=0.0, value=float(_corr_comp_auto.get(_els[16], 0.0)), format="%.4f", key=f"chem_{_els[16]}")
+                st.number_input(_els[16], min_value=0.0, value=float(_corr_comp_auto.get(_els[16], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[16]}")
             with l5c6:
-                st.number_input(_els[17], min_value=0.0, value=float(_corr_comp_auto.get(_els[17], 0.0)), format="%.4f", key=f"chem_{_els[17]}")
+                st.number_input(_els[17], min_value=0.0, value=float(_corr_comp_auto.get(_els[17], 0.0)), format="%.4f", step=0.01, key=f"chem_{_els[17]}")
 
         # Campo invisível para absorver o Enter e evitar submit acidental
         st.text_input(".", value="", label_visibility="collapsed", key="_absorve_enter_corrida")
