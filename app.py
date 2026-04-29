@@ -722,8 +722,12 @@ def pagina_lancar_corrida() -> None:
                 _corr_norma_auto   = _corr_found.norma or ""
                 _corr_comp_auto    = _corr_found.composicao_quimica_pct or {}
                 _corr_cliente_auto = _corr_found.nome_cliente or ""
-                # Salva composição no session_state para preencher campos do form
+                # Salva composição no session_state
                 st.session_state["_corr_auto_comp"] = _corr_comp_auto
+                # Limpa chaves chem_ para forçar rerender com novos valores
+                for _ek in list(st.session_state.keys()):
+                    if _ek.startswith("chem_"):
+                        del st.session_state[_ek]
                 st.info(f"🔄 Corrida encontrada — liga: **{_corr_liga_auto}** | norma: **{_corr_norma_auto}** | composição preenchida automaticamente.")
         except Exception:
             pass
