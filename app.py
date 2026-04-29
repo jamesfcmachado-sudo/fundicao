@@ -3821,6 +3821,27 @@ def pagina_nova_oe():
                         })
 
                 st.success(f"✅ OE Nº {numero_oe_str} gravada com sucesso!")
+
+                # Atualiza qtd_expedida nas OFs somando qtd de cada item
+                try:
+                    with db_session() as _db_exp:
+                        # Agrupa qtd por OF
+                        _qtd_por_of = {}
+                        for it in itens:
+                            _nof = it.get("of", "").strip()
+                            _qtd = int(it.get("qtd", 0) or 0)
+                            if _nof and _qtd > 0:
+                                _qtd_por_of[_nof] = _qtd_por_of.get(_nof, 0) + _qtd
+
+                        for _nof, _qtd in _qtd_por_of.items():
+                            _of_exp = _db_exp.scalar(
+                                select(OrdemFabricacao).where(OrdemFabricacao.numero_of == _nof)
+                            )
+                            if _of_exp:
+                                _of_exp.qtd_expedida = int(_of_exp.qtd_expedida or 0) + _qtd
+                                st.info(f"✅ OF **{_nof}** atualizada: +{_qtd} peças expedidas.")
+                except Exception as _ex_exp:
+                    st.warning(f"OE gravada mas erro ao atualizar qtd_expedida: {_ex_exp}")
                 st.session_state['_oe_gravada_itens'] = itens
                 st.session_state['_oe_gravada_num'] = numero_oe_str
                 st.session_state['_oe_gravada_obs'] = observacoes
