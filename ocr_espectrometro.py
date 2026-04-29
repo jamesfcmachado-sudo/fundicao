@@ -44,34 +44,42 @@ ELEMENTOS = {
 
 # Prompt enviado ao Claude Vision
 PROMPT_OCR = """
-Você é um assistente especializado em leitura de relatórios de espectrômetro de emissão óptica (OES) usados em fundição.
+Você é um assistente especializado em leitura de telas de espectrômetro de emissão óptica (OES) usados em fundição de aço.
 
-Analise a imagem e extraia APENAS os valores de composição química (% em massa de cada elemento).
+A tela do espectrômetro mostra para cada elemento 3 linhas de valores:
+  - linha superior: limite mínimo da norma
+  - linha do meio (x̄): valor MEDIDO da amostra ← USE ESTE
+  - linha inferior: limite máximo da norma
+
+Extraia APENAS o valor medido (linha do meio, marcado com x̄ ou x) de cada elemento presente.
 
 Retorne SOMENTE um objeto JSON válido, sem nenhum texto adicional antes ou depois. Exemplo:
 {
-  "C": "0.18",
-  "Si": "1.25",
-  "Mn": "0.45",
-  "P": "0.020",
-  "S": "0.015",
-  "Cr": "0.10",
-  "Ni": "0.05",
-  "Mo": "0.02",
-  "Cu": "0.08",
-  "V": "0.003",
-  "Ti": "0.004",
-  "Al": "0.025",
-  "W": null,
-  "Fe": "97.82"
+  "C": "0.292",
+  "Si": "0.393",
+  "Mn": "0.94",
+  "P": "0.019",
+  "S": "0.0090",
+  "Cr": "0.141",
+  "Ni": "0.032",
+  "Mo": "0.143",
+  "Al": "0.037",
+  "Cu": "0.011",
+  "Co": "0.0054",
+  "Ti": "0.0010",
+  "Nb": "0.021",
+  "V": "0.0019",
+  "W": "0.010",
+  "B": "0.0007",
+  "Fe": "97.9"
 }
 
 Regras:
+- Use SEMPRE o valor da linha do meio (x̄), nunca os limites superior/inferior.
+- Valores como "<0.010" devem ser retornados como "0.010" (remova o sinal <).
 - Use null para elementos não encontrados na imagem.
-- Valores como "< 0.001" devem ser retornados como "0.001".
-- Se houver mais de uma leitura (ex.: duas amostras), use os valores da PRIMEIRA coluna válida.
-- Não inclua unidades, apenas o número decimal com ponto.
-- Se a imagem não for de um espectrômetro ou não contiver dados de composição química, retorne {"erro": "Imagem não reconhecida como relatório de espectrômetro"}.
+- Não inclua unidades, apenas o número decimal com ponto (não vírgula).
+- Se a imagem não for de um espectrômetro, retorne {"erro": "Imagem não reconhecida como relatório de espectrômetro"}.
 """
 
 
