@@ -822,7 +822,8 @@ def pagina_lancar_corrida() -> None:
                 value=st.session_state.get("_of_auto_cliente", _of_cliente_auto),
             )
         with l1c3:
-            qtd_fundidas = st.number_input("Qtd peças fundidas *", min_value=0, value=int(_qtd_input), step=1)
+            st.write(f"**Qtd peças fundidas:** {int(_qtd_input)}")
+            qtd_fundidas = _qtd_input
         with l1c4:
             serie = st.text_input(
                 "Série das peças",
