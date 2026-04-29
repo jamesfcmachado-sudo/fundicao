@@ -171,7 +171,7 @@ def render_ocr_espectrometro():
             )
 
         if foto is not None:
-            st.image(foto, caption="Pré-visualização", use_container_width=True)
+            st.success(f"✅ Foto carregada: {foto.name}")
 
             processar = st.button(
                 "🔍 Extrair composição química",
