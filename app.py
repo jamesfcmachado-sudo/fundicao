@@ -916,7 +916,19 @@ def pagina_lancar_corrida() -> None:
             db.add(corrida)
             db.flush()
             db.refresh(corrida)
-        st.success(f"Corrida **{corrida.numero_corrida}** registrada em fundicao.db.")
+
+            # Atualiza qtd_pecas_fundidas na OF somando a quantidade da corrida
+            if of_id and int(qtd_fundidas) > 0:
+                _of_atualizar = db.scalar(
+                    select(OrdemFabricacao).where(OrdemFabricacao.id == of_id)
+                )
+                if _of_atualizar:
+                    _qtd_atual = int(_of_atualizar.qtd_pecas_fundidas or 0)
+                    _of_atualizar.qtd_pecas_fundidas = _qtd_atual + int(qtd_fundidas)
+
+        st.success(f"Corrida **{corrida.numero_corrida}** registrada com sucesso!")
+        if of_id and int(qtd_fundidas) > 0:
+            st.info(f"✅ OF **{nof}** atualizada: +{int(qtd_fundidas)} peças fundidas.")
         st.json(composicao)
     except IntegrityError as e:
         st.error(f"Corrida já existe para este número e data, ou vínculo inválido: {e}")
