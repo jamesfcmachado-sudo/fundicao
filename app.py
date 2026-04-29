@@ -738,6 +738,8 @@ def pagina_lancar_corrida() -> None:
     _of_liga_auto    = _corr_liga_auto
     _of_norma_auto   = _corr_norma_auto
     _of_id_auto      = None
+    _serie_auto      = ""  # próxima série calculada automaticamente
+
     if _numero_of_input.strip():
         try:
             with SessionLocal() as _db_of:
@@ -746,6 +748,16 @@ def pagina_lancar_corrida() -> None:
                         OrdemFabricacao.numero_of == _numero_of_input.strip().upper()
                     )
                 ).scalar_one_or_none()
+
+                # Busca última série cadastrada para esta OF
+                _ultima_corrida_of = _db_of.execute(
+                    select(Corrida).where(
+                        Corrida.numero_ordem_fabricacao == _numero_of_input.strip().upper(),
+                        Corrida.serie_pecas_fundidas != None,
+                        Corrida.serie_pecas_fundidas != ""
+                    ).order_by(Corrida.criado_em.desc())
+                ).scalars().first()
+
             if _of_found:
                 _of_cliente_auto = _of_found.nome_cliente or ""
                 _of_liga_auto    = _of_found.liga or _corr_liga_auto
@@ -755,8 +767,43 @@ def pagina_lancar_corrida() -> None:
             else:
                 if len(_numero_of_input.strip()) >= 5:
                     st.warning("⚠️ OF não encontrada no banco.")
+
+            # Calcula próxima série baseada na última série cadastrada
+            if _ultima_corrida_of and _ultima_corrida_of.serie_pecas_fundidas:
+                _ultima_serie = _ultima_corrida_of.serie_pecas_fundidas.strip().upper()
+                import re as _re
+                # Busca o maior número final nas séries (formato "X A Y" ou "X E Y")
+                _nums = _re.findall(r'\d+', _ultima_serie)
+                if _nums:
+                    _ultimo_num = max(int(n) for n in _nums)
+                    _proximo_inicio = _ultimo_num + 1
+                    st.info(f"📋 Última série da OF: **{_ultima_serie}** → próxima série começa em **{_proximo_inicio}**")
+                    # Guarda para usar no campo série
+                    st.session_state["_serie_proximo_inicio"] = _proximo_inicio
+                else:
+                    st.session_state.pop("_serie_proximo_inicio", None)
+            else:
+                st.session_state.pop("_serie_proximo_inicio", None)
+
         except Exception:
             pass
+
+    # ── Quantidade e série automática (fora do form para ser reativo) ────────
+    _qtd_input = st.number_input(
+        "Qtd peças fundidas *",
+        min_value=0, value=0, step=1,
+        key="lancar_corrida_qtd_input",
+    )
+
+    # Calcula série automaticamente com base na última série + quantidade
+    _prox_inicio = st.session_state.get("_serie_proximo_inicio")
+    _serie_sugerida = ""
+    if _prox_inicio and _qtd_input > 0:
+        _proximo_fim = _prox_inicio + int(_qtd_input) - 1
+        _serie_sugerida = f"{_prox_inicio} A {_proximo_fim}"
+        st.success(f"📋 Série calculada: **{_serie_sugerida}**")
+    elif _prox_inicio:
+        st.info(f"📋 Última série da OF terminou em **{_prox_inicio - 1}** — digite a quantidade para calcular a próxima série.")
 
     with st.form("form_corrida", clear_on_submit=False):
         l1c1, l1c2, l1c3, l1c4 = st.columns(4)
@@ -770,9 +817,13 @@ def pagina_lancar_corrida() -> None:
                 value=_of_cliente_auto,
             )
         with l1c3:
-            qtd_fundidas = st.number_input("Qtd peças fundidas *", min_value=0, value=0, step=1)
+            qtd_fundidas = st.number_input("Qtd peças fundidas *", min_value=0, value=int(_qtd_input), step=1)
         with l1c4:
-            serie = st.text_input("Série das peças")
+            serie = st.text_input(
+                "Série das peças",
+                value=_serie_sugerida,
+                help="Preenchido automaticamente com a continuação da última série da OF.",
+            )
 
         l2c1, l2c2, l2c3, l2c4, l2c5, l2c6 = st.columns(6)
         with l2c1:
