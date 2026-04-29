@@ -977,10 +977,18 @@ def pagina_lancar_corrida() -> None:
                     _qtd_atual = int(_of_atualizar.qtd_fundida or 0)
                     _of_atualizar.qtd_fundida = _qtd_atual + int(qtd_fundidas)
 
-        st.success(f"Corrida **{corrida.numero_corrida}** registrada com sucesso!")
+        st.success(f"✅ Corrida **{corrida.numero_corrida}** registrada com sucesso!")
         if of_id and int(qtd_fundidas) > 0:
             st.info(f"✅ OF **{nof}** atualizada: +{int(qtd_fundidas)} peças fundidas.")
-        st.json(composicao)
+
+        # Limpa todos os campos para novo lançamento
+        for _k in list(st.session_state.keys()):
+            if any(_k.startswith(p) for p in [
+                "lancar_corrida_", "chem_", "_serie_proximo_inicio", "_absorve_enter_corrida"
+            ]):
+                del st.session_state[_k]
+        st.session_state.pop("_serie_proximo_inicio", None)
+        st.rerun()
     except IntegrityError as e:
         st.error(f"Corrida já existe para este número e data, ou vínculo inválido: {e}")
     except Exception as e:
