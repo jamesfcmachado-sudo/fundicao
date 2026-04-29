@@ -88,10 +88,12 @@ def render_ocr_espectrometro():
                         b64, mtype = _imagen_para_base64(foto)
                         resultado = _chamar_claude_vision(b64, mtype)
 
+                        # DEBUG: salva o JSON bruto retornado pela IA
+                        st.session_state["ocr_debug_json"] = resultado
+
                         if "erro" in resultado:
                             st.session_state[foto_key] = {"status": "erro", "msg": resultado["erro"]}
                         else:
-                            # Grava valores e deleta chaves de widget para forçar rerenderização
                             aplicados = []
                             ignorados = []
                             for elem in ELEMENTOS:
@@ -100,11 +102,10 @@ def render_ocr_espectrometro():
                                     try:
                                         chave = f"chem_{elem}"
                                         float_val = float(str(valor).replace(",", "."))
-                                        # Deleta a chave do widget para o Streamlit aceitar o novo valor
                                         if chave in st.session_state:
                                             del st.session_state[chave]
                                         st.session_state[chave] = float_val
-                                        aplicados.append(f"{elem}: {valor}")
+                                        aplicados.append(f"{elem}={valor}")
                                     except ValueError:
                                         ignorados.append(elem)
 
@@ -115,16 +116,25 @@ def render_ocr_espectrometro():
                             }
                     except Exception as e:
                         st.session_state[foto_key] = {"status": "erro", "msg": str(e)}
+                        st.session_state["ocr_debug_json"] = {"exception": str(e)}
                 st.rerun()
 
             res = st.session_state.get(foto_key, {})
             if res.get("status") == "ok":
                 aplicados = res.get("aplicados", [])
                 ignorados = res.get("ignorados", [])
-                st.success(f"✅ {len(aplicados)} elemento(s) preenchido(s)! Revise os valores abaixo.")
+                st.success(f"✅ {len(aplicados)} elemento(s) preenchido(s)!")
                 if ignorados:
                     st.warning("Não importados: " + ", ".join(ignorados))
             elif res.get("status") == "erro":
-                st.error(f"❌ {res.get('msg')}. Preencha manualmente.")
+                st.error(f"❌ {res.get('msg')}")
+
+            # DEBUG: mostra o JSON retornado pela IA e o session_state dos campos
+            if "ocr_debug_json" in st.session_state:
+                st.markdown("**🔧 DEBUG — JSON retornado pela IA:**")
+                st.json(st.session_state["ocr_debug_json"])
+                st.markdown("**🔧 DEBUG — Valores no session_state (chem_*):**")
+                chem_vals = {k: v for k, v in st.session_state.items() if k.startswith("chem_")}
+                st.json(chem_vals)
 
     st.markdown("---")
