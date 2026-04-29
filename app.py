@@ -1630,7 +1630,8 @@ def pagina_relatorios() -> None:
                                                         # Atualiza em cascata nas corridas vinculadas
                                                         _corridas_vinc = _db_save.execute(
                                                             select(Corrida).where(
-                                                                Corrida.numero_ordem_fabricacao == _nof_sel
+                                                                (Corrida.numero_ordem_fabricacao == _nof_sel) |
+                                                                (Corrida.ordem_fabricacao_id == _of_save.id)
                                                             )
                                                         ).scalars().all()
                                                         for _corr_v in _corridas_vinc:
