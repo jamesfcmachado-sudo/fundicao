@@ -822,6 +822,8 @@ def pagina_lancar_corrida() -> None:
         else:
             st.success(f"📋 Série calculada: **{_serie_sugerida}**")
 
+    render_ocr_espectrometro()
+
     with st.form("form_corrida", clear_on_submit=False):
         l1c1, l1c2, l1c3, l1c4 = st.columns(4)
         with l1c1:
@@ -859,7 +861,6 @@ def pagina_lancar_corrida() -> None:
 
         st.subheader("Composição química (%)")
         st.caption("Percentuais; apenas valores maiores que zero entram na composição.")
-        render_ocr_espectrometro()
 
         raw_json = ""
         l3c1, l3c2, l3c3, l3c4, l3c5, l3c6 = st.columns(6)
