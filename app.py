@@ -1884,6 +1884,16 @@ def pagina_relatorios() -> None:
                                 with db_session() as _db_cd:
                                     _corr_d = _db_cd.scalar(select(Corrida).where(Corrida.id == _id_corr_sel))
                                     if _corr_d:
+                                        # Atualiza qtd_fundida na OF antes de excluir
+                                        if _corr_d.numero_ordem_fabricacao:
+                                            _of_corr = _db_cd.scalar(
+                                                select(OrdemFabricacao).where(
+                                                    OrdemFabricacao.numero_of == _corr_d.numero_ordem_fabricacao
+                                                )
+                                            )
+                                            if _of_corr:
+                                                _qtd_remover = int(_corr_d.qtd_pecas_fundidas or 0)
+                                                _of_corr.qtd_fundida = max(0, int(_of_corr.qtd_fundida or 0) - _qtd_remover)
                                         _db_cd.delete(_corr_d)
                                 st.success("Corrida excluída com sucesso.")
                                 st.session_state.pop("sel_df_corridas", None)
