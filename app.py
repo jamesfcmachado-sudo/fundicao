@@ -43,6 +43,7 @@ from auth import (
     init_auth_db, tela_login, tela_admin_usuarios,
     tem_permissao, usuario_logado, fazer_logout, PERMISSOES,
 )
+from ocr_espectrometro import render_ocr_espectrometro
 
 # sqlite3 removido — agora usa PostgreSQL via SQLAlchemy
 
@@ -858,6 +859,7 @@ def pagina_lancar_corrida() -> None:
 
         st.subheader("Composição química (%)")
         st.caption("Percentuais; apenas valores maiores que zero entram na composição.")
+        render_ocr_espectrometro()
 
         raw_json = ""
         l3c1, l3c2, l3c3, l3c4, l3c5, l3c6 = st.columns(6)
