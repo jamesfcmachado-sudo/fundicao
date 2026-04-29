@@ -804,7 +804,11 @@ def pagina_lancar_corrida() -> None:
     _serie_sugerida = ""
     if _qtd_input > 0:
         _proximo_fim = _prox_inicio + int(_qtd_input) - 1
-        _serie_sugerida = f"{_prox_inicio} A {_proximo_fim}"
+        # Se for só 1 peça, mostra só o número
+        if int(_qtd_input) == 1:
+            _serie_sugerida = str(_prox_inicio)
+        else:
+            _serie_sugerida = f"{_prox_inicio} A {_proximo_fim}"
         if _prox_inicio == 1:
             st.info(f"📋 Primeira série da OF: **{_serie_sugerida}**")
         else:
