@@ -10,26 +10,10 @@ import re
 from PIL import Image
 import io
 
-ELEMENTOS = {
-    "C":  "chem_C",
-    "Si": "chem_Si",
-    "Mn": "chem_Mn",
-    "P":  "chem_P",
-    "S":  "chem_S",
-    "Cr": "chem_Cr",
-    "Ni": "chem_Ni",
-    "Mo": "chem_Mo",
-    "Cu": "chem_Cu",
-    "W":  "chem_W",
-    "Nb": "chem_Nb",
-    "B":  "chem_B",
-    "CE": "chem_CE",
-    "V":  "chem_V",
-    "Co": "chem_Co",
-    "Fe": "chem_Fe",
-    "N":  "chem_N",
-    "Mg": "chem_Mg",
-}
+ELEMENTOS = [
+    "C", "Si", "Mn", "P", "S", "Cr", "Ni", "Mo", "Cu",
+    "W", "Nb", "B", "CE", "V", "Co", "Fe", "N", "Mg",
+]
 
 PROMPT_OCR = """
 Voce e um assistente especializado em leitura de telas de espectrometro de emissao optica (OES) usados em fundicao de aco.
@@ -82,20 +66,6 @@ def _chamar_claude_vision(b64_image, media_type):
     return json.loads(raw)
 
 
-def _aplicar_valores_session_state(resultado):
-    aplicados = []
-    ignorados = []
-    for elem, chave in ELEMENTOS.items():
-        valor = resultado.get(elem)
-        if valor is not None and valor != "null":
-            try:
-                st.session_state[chave] = float(str(valor).replace(",", "."))
-                aplicados.append(f"{elem}: {valor}")
-            except ValueError:
-                ignorados.append(elem)
-    return aplicados, ignorados
-
-
 def render_ocr_espectrometro():
     st.markdown("---")
 
@@ -117,11 +87,32 @@ def render_ocr_espectrometro():
                         foto.seek(0)
                         b64, mtype = _imagen_para_base64(foto)
                         resultado = _chamar_claude_vision(b64, mtype)
+
                         if "erro" in resultado:
                             st.session_state[foto_key] = {"status": "erro", "msg": resultado["erro"]}
                         else:
-                            aplicados, ignorados = _aplicar_valores_session_state(resultado)
-                            st.session_state[foto_key] = {"status": "ok", "aplicados": aplicados, "ignorados": ignorados}
+                            # Grava valores e deleta chaves de widget para forçar rerenderização
+                            aplicados = []
+                            ignorados = []
+                            for elem in ELEMENTOS:
+                                valor = resultado.get(elem)
+                                if valor is not None and valor != "null":
+                                    try:
+                                        chave = f"chem_{elem}"
+                                        float_val = float(str(valor).replace(",", "."))
+                                        # Deleta a chave do widget para o Streamlit aceitar o novo valor
+                                        if chave in st.session_state:
+                                            del st.session_state[chave]
+                                        st.session_state[chave] = float_val
+                                        aplicados.append(f"{elem}: {valor}")
+                                    except ValueError:
+                                        ignorados.append(elem)
+
+                            st.session_state[foto_key] = {
+                                "status": "ok",
+                                "aplicados": aplicados,
+                                "ignorados": ignorados,
+                            }
                     except Exception as e:
                         st.session_state[foto_key] = {"status": "erro", "msg": str(e)}
                 st.rerun()
