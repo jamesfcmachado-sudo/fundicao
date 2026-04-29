@@ -163,10 +163,7 @@ def render_ocr_espectrometro():
             "de composição química e preencherá os campos abaixo."
         )
 
-        col_upload, col_preview = st.columns([1, 1])
-
-        with col_upload:
-            foto = st.file_uploader(
+        foto = st.file_uploader(
                 "Selecionar imagem",
                 type=["jpg", "jpeg", "png", "webp", "bmp"],
                 key="ocr_foto_upload",
@@ -174,23 +171,14 @@ def render_ocr_espectrometro():
             )
 
         if foto is not None:
-            with col_preview:
-                st.image(foto, caption="Pré-visualização", use_container_width=True)
+            st.image(foto, caption="Pré-visualização", use_container_width=True)
 
-            st.markdown("##### Verificação antes de importar")
-            st.caption(
-                "Confirme que a imagem mostra claramente os valores numéricos dos "
-                "elementos químicos antes de processar."
+            processar = st.button(
+                "🔍 Extrair composição química",
+                type="primary",
+                key="ocr_btn_processar",
+                use_container_width=True,
             )
-
-            col_btn, col_status = st.columns([1, 2])
-            with col_btn:
-                processar = st.button(
-                    "🔍 Extrair composição química",
-                    type="primary",
-                    key="ocr_btn_processar",
-                    use_container_width=True,
-                )
 
             if processar:
                 with st.spinner("Analisando imagem com IA… aguarde alguns segundos."):
@@ -237,16 +225,6 @@ def render_ocr_espectrometro():
                     except Exception as e:
                         st.error(f"❌ Erro inesperado: {e}")
 
-        else:
-            st.markdown(
-                """
-                **Como usar:**
-                1. Abra o relatório do espectrômetro na tela ou imprima-o
-                2. Fotografe com o celular (câmera traseira, boa iluminação)
-                3. Transfira a foto para este dispositivo ou use diretamente pelo celular
-                4. Clique em **Selecionar imagem** acima e escolha a foto
-                5. Clique em **Extrair composição química**
-                """
-            )
+
 
     st.markdown("---")
