@@ -763,6 +763,10 @@ def pagina_lancar_corrida() -> None:
                 _of_liga_auto    = _of_found.liga or _corr_liga_auto
                 _of_norma_auto   = _of_found.norma or _corr_norma_auto
                 _of_id_auto      = _of_found.id
+                # Salva no session_state para preencher campos do form
+                st.session_state["_of_auto_cliente"] = _of_cliente_auto
+                st.session_state["_of_auto_liga"]    = _of_liga_auto
+                st.session_state["_of_auto_norma"]   = _of_norma_auto
                 st.success(f"✅ OF encontrada: **{_of_found.nome_cliente}**")
             else:
                 if len(_numero_of_input.strip()) >= 5:
@@ -796,14 +800,15 @@ def pagina_lancar_corrida() -> None:
     )
 
     # Calcula série automaticamente com base na última série + quantidade
-    _prox_inicio = st.session_state.get("_serie_proximo_inicio")
+    _prox_inicio = st.session_state.get("_serie_proximo_inicio", 1)  # começa do 1 se não houver série anterior
     _serie_sugerida = ""
-    if _prox_inicio and _qtd_input > 0:
+    if _qtd_input > 0:
         _proximo_fim = _prox_inicio + int(_qtd_input) - 1
         _serie_sugerida = f"{_prox_inicio} A {_proximo_fim}"
-        st.success(f"📋 Série calculada: **{_serie_sugerida}**")
-    elif _prox_inicio:
-        st.info(f"📋 Última série da OF terminou em **{_prox_inicio - 1}** — digite a quantidade para calcular a próxima série.")
+        if _prox_inicio == 1:
+            st.info(f"📋 Primeira série da OF: **{_serie_sugerida}**")
+        else:
+            st.success(f"📋 Série calculada: **{_serie_sugerida}**")
 
     with st.form("form_corrida", clear_on_submit=False):
         l1c1, l1c2, l1c3, l1c4 = st.columns(4)
@@ -814,7 +819,7 @@ def pagina_lancar_corrida() -> None:
         with l1c2:
             nome_cliente = st.text_input(
                 "Nome do cliente *",
-                value=_of_cliente_auto,
+                value=st.session_state.get("_of_auto_cliente", _of_cliente_auto),
             )
         with l1c3:
             qtd_fundidas = st.number_input("Qtd peças fundidas *", min_value=0, value=int(_qtd_input), step=1)
@@ -827,9 +832,9 @@ def pagina_lancar_corrida() -> None:
 
         l2c1, l2c2, l2c3, l2c4, l2c5, l2c6 = st.columns(6)
         with l2c1:
-            liga = st.text_input("Liga", value=_of_liga_auto)
+            liga = st.text_input("Liga", value=st.session_state.get("_of_auto_liga", _of_liga_auto))
         with l2c2:
-            norma = st.text_input("Norma", value=_of_norma_auto)
+            norma = st.text_input("Norma", value=st.session_state.get("_of_auto_norma", _of_norma_auto))
         with l2c3:
             usar_json = st.checkbox("Composição via JSON", value=False)
         with l2c4:
@@ -984,7 +989,8 @@ def pagina_lancar_corrida() -> None:
         # Limpa todos os campos para novo lançamento
         for _k in list(st.session_state.keys()):
             if any(_k.startswith(p) for p in [
-                "lancar_corrida_", "chem_", "_serie_proximo_inicio", "_absorve_enter_corrida"
+                "lancar_corrida_", "chem_", "_serie_proximo_inicio",
+                "_absorve_enter_corrida", "_of_auto_"
             ]):
                 del st.session_state[_k]
         st.session_state.pop("_serie_proximo_inicio", None)
