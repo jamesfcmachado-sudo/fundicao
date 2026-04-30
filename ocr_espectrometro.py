@@ -1,12 +1,13 @@
 """
 ocr_espectrometro.py
+Módulo de OCR para leitura de tela do espectrômetro via Google Cloud Vision API.
 """
 
 import streamlit as st
-import anthropic
 import base64
 import json
 import re
+import requests
 from PIL import Image
 import io
 
@@ -14,27 +15,6 @@ ELEMENTOS = [
     "C", "Si", "Mn", "P", "S", "Cr", "Ni", "Mo", "Cu",
     "W", "Nb", "B", "CE", "V", "Co", "Fe", "N", "Mg",
 ]
-
-PROMPT_OCR = """
-Voce e um assistente especializado em leitura de telas de espectrometro de emissao optica (OES) usados em fundicao de aco.
-
-A tela do espectrometro mostra para cada elemento 3 linhas de valores:
-  - linha superior: limite minimo da norma
-  - linha do meio (x): valor MEDIDO da amostra - USE ESTE
-  - linha inferior: limite maximo da norma
-
-Extraia APENAS o valor medido (linha do meio) de cada elemento presente.
-
-Retorne SOMENTE um objeto JSON valido, sem nenhum texto adicional antes ou depois. Exemplo:
-{"C":"0.292","Si":"0.393","Mn":"0.94","P":"0.019","S":"0.0090","Cr":"0.141","Ni":"0.032","Mo":"0.143","Cu":"0.011","Co":"0.0054","Nb":"0.021","V":"0.0019","W":"0.010","B":"0.0007","Fe":"97.9"}
-
-Regras:
-- Use SEMPRE o valor da linha do meio, nunca os limites superior/inferior.
-- Valores como <0.010 devem ser retornados como 0.010 (remova o sinal <).
-- Use null para elementos nao encontrados na imagem.
-- Nao inclua unidades, apenas o numero decimal com ponto.
-- Se a imagem nao for de um espectrometro, retorne {"erro":"Imagem nao reconhecida"}.
-"""
 
 
 def _imagen_para_base64(uploaded_file):
@@ -45,25 +25,79 @@ def _imagen_para_base64(uploaded_file):
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=90)
     b64 = base64.standard_b64encode(buf.getvalue()).decode("utf-8")
-    return b64, "image/jpeg"
+    return b64
 
 
-def _chamar_claude_vision(b64_image, media_type):
-    client = anthropic.Anthropic()
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1024,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64_image}},
-                {"type": "text", "text": PROMPT_OCR},
-            ],
-        }],
-    )
-    raw = message.content[0].text.strip()
-    raw = re.sub(r"```(?:json)?", "", raw).strip("` \n")
-    return json.loads(raw)
+def _extrair_valores_do_texto(texto):
+    """
+    Analisa o texto extraído pelo Google Vision e mapeia os valores de composição química.
+    Estratégia: para cada elemento, pega o valor numérico que aparece na linha do meio (x̄).
+    """
+    linhas = texto.split("\n")
+    resultado = {}
+
+    # Encontra os elementos na tabela e seus valores
+    for i, linha in enumerate(linhas):
+        linha = linha.strip()
+        for elem in ELEMENTOS:
+            # Verifica se a linha contém apenas o símbolo do elemento (cabeçalho da coluna)
+            if re.match(rf'^{re.escape(elem)}\s*$', linha, re.IGNORECASE) or \
+               re.match(rf'^{re.escape(elem)}\s*%\s*$', linha, re.IGNORECASE):
+                # Procura o valor numérico nas próximas linhas
+                for j in range(i+1, min(i+6, len(linhas))):
+                    proxima = linhas[j].strip()
+                    # Remove < e outros prefixos
+                    proxima_limpa = re.sub(r'^[<>≤≥]', '', proxima).strip()
+                    try:
+                        valor = float(proxima_limpa.replace(",", "."))
+                        if 0 <= valor <= 100:
+                            if elem not in resultado:
+                                resultado[elem] = str(valor)
+                            break
+                    except ValueError:
+                        if proxima and not re.match(r'^[A-Za-z%]', proxima):
+                            continue
+                        break
+
+    # Segunda estratégia: busca por padrões "ELEM valor" na mesma linha
+    texto_completo = texto
+    for elem in ELEMENTOS:
+        if elem not in resultado:
+            # Padrão: elemento seguido de número na mesma linha
+            padrao = rf'\b{re.escape(elem)}\s*%?\s*([<>]?\s*\d+[.,]\d+)'
+            match = re.search(padrao, texto_completo, re.IGNORECASE)
+            if match:
+                valor_str = re.sub(r'^[<>]', '', match.group(1)).strip()
+                try:
+                    valor = float(valor_str.replace(",", "."))
+                    if 0 <= valor <= 100:
+                        resultado[elem] = str(valor)
+                except ValueError:
+                    pass
+
+    return resultado
+
+
+def _chamar_google_vision(b64_image, api_key):
+    """Chama a Google Cloud Vision API para extrair texto da imagem."""
+    url = f"https://vision.googleapis.com/v1/images:annotate?key={api_key}"
+    payload = {
+        "requests": [{
+            "image": {"content": b64_image},
+            "features": [{"type": "TEXT_DETECTION"}]
+        }]
+    }
+    response = requests.post(url, json=payload, timeout=30)
+    response.raise_for_status()
+    data = response.json()
+
+    # Extrai o texto completo
+    try:
+        texto = data["responses"][0]["fullTextAnnotation"]["text"]
+    except (KeyError, IndexError):
+        texto = ""
+
+    return texto
 
 
 def render_ocr_espectrometro():
@@ -84,57 +118,58 @@ def render_ocr_espectrometro():
             if foto_key not in st.session_state:
                 with st.spinner("🔍 Analisando imagem... aguarde."):
                     try:
+                        api_key = st.secrets.get("GOOGLE_VISION_API_KEY", "")
+                        if not api_key:
+                            raise ValueError("GOOGLE_VISION_API_KEY não configurada nos Secrets")
+
                         foto.seek(0)
-                        b64, mtype = _imagen_para_base64(foto)
-                        resultado = _chamar_claude_vision(b64, mtype)
+                        b64 = _imagen_para_base64(foto)
+                        texto_extraido = _chamar_google_vision(b64, api_key)
 
-                        # DEBUG: salva o JSON bruto retornado pela IA
-                        st.session_state["ocr_debug_json"] = resultado
+                        # DEBUG: salva texto extraído
+                        st.session_state["ocr_debug_texto"] = texto_extraido
 
-                        if "erro" in resultado:
-                            st.session_state[foto_key] = {"status": "erro", "msg": resultado["erro"]}
-                        else:
-                            aplicados = []
-                            ignorados = []
-                            for elem in ELEMENTOS:
-                                valor = resultado.get(elem)
-                                if valor is not None and valor != "null":
-                                    try:
-                                        chave = f"chem_{elem}"
-                                        float_val = float(str(valor).replace(",", "."))
-                                        if chave in st.session_state:
-                                            del st.session_state[chave]
-                                        st.session_state[chave] = float_val
-                                        aplicados.append(f"{elem}={valor}")
-                                    except ValueError:
-                                        ignorados.append(elem)
+                        resultado = _extrair_valores_do_texto(texto_extraido)
 
-                            st.session_state[foto_key] = {
-                                "status": "ok",
-                                "aplicados": aplicados,
-                                "ignorados": ignorados,
-                            }
+                        aplicados = []
+                        ignorados = []
+                        for elem in ELEMENTOS:
+                            valor = resultado.get(elem)
+                            if valor:
+                                try:
+                                    chave = f"chem_{elem}"
+                                    float_val = float(str(valor).replace(",", "."))
+                                    if chave in st.session_state:
+                                        del st.session_state[chave]
+                                    st.session_state[chave] = float_val
+                                    aplicados.append(f"{elem}: {valor}")
+                                except ValueError:
+                                    ignorados.append(elem)
+
+                        st.session_state[foto_key] = {
+                            "status": "ok",
+                            "aplicados": aplicados,
+                            "ignorados": ignorados,
+                        }
                     except Exception as e:
                         st.session_state[foto_key] = {"status": "erro", "msg": str(e)}
-                        st.session_state["ocr_debug_json"] = {"exception": str(e)}
                 st.rerun()
 
             res = st.session_state.get(foto_key, {})
             if res.get("status") == "ok":
                 aplicados = res.get("aplicados", [])
                 ignorados = res.get("ignorados", [])
-                st.success(f"✅ {len(aplicados)} elemento(s) preenchido(s)!")
+                st.success(f"✅ {len(aplicados)} elemento(s) preenchido(s)! Revise os valores abaixo.")
+                if aplicados:
+                    st.write(", ".join(aplicados))
                 if ignorados:
-                    st.warning("Não importados: " + ", ".join(ignorados))
+                    st.warning("Não encontrados: " + ", ".join(ignorados))
             elif res.get("status") == "erro":
                 st.error(f"❌ {res.get('msg')}")
 
-            # DEBUG: mostra o JSON retornado pela IA e o session_state dos campos
-            if "ocr_debug_json" in st.session_state:
-                st.markdown("**🔧 DEBUG — JSON retornado pela IA:**")
-                st.json(st.session_state["ocr_debug_json"])
-                st.markdown("**🔧 DEBUG — Valores no session_state (chem_*):**")
-                chem_vals = {k: v for k, v in st.session_state.items() if k.startswith("chem_")}
-                st.json(chem_vals)
+            # DEBUG: mostra texto bruto extraído
+            if "ocr_debug_texto" in st.session_state:
+                with st.expander("🔧 DEBUG - Texto extraído"):
+                    st.text(st.session_state["ocr_debug_texto"])
 
     st.markdown("---")
