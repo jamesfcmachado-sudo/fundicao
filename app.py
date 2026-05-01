@@ -4462,7 +4462,7 @@ def pagina_consulta_oes():
 
     # ── Botao gerar OE com template (aparece quando filtra por numero de OE) ─
     _oes_unicas = df["numero_oe"].unique().tolist()
-    if len(_oes_unicas) == 1 or (f_oe.strip() and len(_oes_unicas) <= 3):
+    if len(_oes_unicas) <= 10:
         _tmpl_b64 = get_config("template_oe_base64", "")
         if _tmpl_b64:
             st.divider()
