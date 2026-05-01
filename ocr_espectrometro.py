@@ -93,45 +93,54 @@ def _extrair_valores_por_coordenadas(palavras):
             linha_x_y = p["cy"]
             break
 
-    # Para cada elemento, busca o valor numérico na mesma coluna (cx próximo)
-    # na faixa de Y abaixo do cabeçalho
+    # Para cada elemento, busca os valores numéricos na mesma coluna
+    # e pega o valor do MEIO (linha x̄ = valor medido)
+    tol_x = 60
+
     for h in headers:
         elem = h["elem"]
         if elem in resultado:
             continue
 
-        # Define tolerância horizontal (coluna)
-        tol_x = 60
-
         # Candidatos: palavras na mesma coluna X, abaixo do cabeçalho
         candidatos = [
             p for p in palavras
             if abs(p["cx"] - h["cx"]) < tol_x
-            and p["cy"] > h["cy"] + 10
-            and p["cy"] < h["cy"] + 300  # limita busca vertical
+            and p["cy"] > h["cy"] + 5
+            and p["cy"] < h["cy"] + 350
         ]
 
-        # Se encontrou linha X, prioriza candidatos próximos a ela
-        if linha_x_y:
-            candidatos_x = [
-                p for p in candidatos
-                if abs(p["cy"] - linha_x_y) < 25
-            ]
-            if candidatos_x:
-                candidatos = candidatos_x
-
-        # Tenta parsear cada candidato como número
-        for c in sorted(candidatos, key=lambda p: p["cy"]):
+        # Filtra apenas valores numéricos válidos
+        numericos = []
+        for c in candidatos:
             txt = c["texto"].strip()
             txt_limpo = re.sub(r'^[<>≤≥]', '', txt).strip()
             txt_limpo = txt_limpo.replace(",", ".")
             try:
                 valor = float(txt_limpo)
                 if 0 <= valor <= 100:
-                    resultado[elem] = str(valor)
-                    break
+                    numericos.append({"valor": valor, "cy": c["cy"], "txt": txt})
             except ValueError:
                 continue
+
+        if not numericos:
+            continue
+
+        numericos = sorted(numericos, key=lambda x: x["cy"])
+
+        # Se linha X foi detectada, pega o valor mais próximo a ela
+        if linha_x_y:
+            mais_proximo = min(numericos, key=lambda x: abs(x["cy"] - linha_x_y))
+            resultado[elem] = str(mais_proximo["valor"])
+        elif len(numericos) == 1:
+            # Só um valor — usa ele
+            resultado[elem] = str(numericos[0]["valor"])
+        elif len(numericos) == 2:
+            # Dois valores — pega o maior (mais provável ser o medido)
+            resultado[elem] = str(max(numericos, key=lambda x: x["valor"])["valor"])
+        elif len(numericos) >= 3:
+            # Três valores (min, medido, max) — pega o do meio
+            resultado[elem] = str(numericos[len(numericos)//2]["valor"])
 
     return resultado
 
