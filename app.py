@@ -4034,12 +4034,31 @@ def pagina_nova_oe():
                             if _nof and _qtd > 0:
                                 _qtd_por_of[_nof] = _qtd_por_of.get(_nof, 0) + _qtd
 
+                        # Agrupa também valor unitário e peso unitário por OF
+                        _pu_por_of = {}
+                        _peso_por_of = {}
+                        for it in itens:
+                            _nof = it.get("of", "").strip()
+                            _pu = float(it.get("preco_unit", 0) or 0)
+                            _peso = float(it.get("peso_unit", 0) or 0)
+                            if _nof:
+                                if _pu > 0:
+                                    _pu_por_of[_nof] = _pu
+                                if _peso > 0:
+                                    _peso_por_of[_nof] = _peso
+
                         for _nof, _qtd in _qtd_por_of.items():
                             _of_exp = _db_exp.scalar(
                                 select(OrdemFabricacao).where(OrdemFabricacao.numero_of == _nof)
                             )
                             if _of_exp:
                                 _of_exp.qtd_expedida = int(_of_exp.qtd_expedida or 0) + _qtd
+                                # Atualiza valor unitário se informado na OE
+                                if _nof in _pu_por_of:
+                                    _of_exp.valor_unitario = _pu_por_of[_nof]
+                                # Atualiza peso unitário se informado na OE
+                                if _nof in _peso_por_of:
+                                    _of_exp.peso_liquido_kg = _peso_por_of[_nof]
                                 st.info(f"✅ OF **{_nof}** atualizada: +{_qtd} peças expedidas.")
                 except Exception as _ex_exp:
                     st.warning(f"OE gravada mas erro ao atualizar qtd_expedida: {_ex_exp}")
