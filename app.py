@@ -3814,7 +3814,7 @@ def pagina_nova_oe():
                                             value=of_obj.numero_of or '')
                 with r1c1:
                     referencia = st.text_input("Referência", key=f"ref_{i}",
-                                               value=of_obj.numero_desenho or '')
+                                               value=of_obj.numero_modelo or '')
                 with r1c2:
                     liga = st.text_input("Liga", key=f"liga_{i}", value=of_obj.liga or '')
                 with r1c3:
@@ -3822,10 +3822,13 @@ def pagina_nova_oe():
                 with r1c4:
                     certificado = st.text_input(f"Certificado (disponíveis: {certs_str})",
                                                 key=f"cert_{i}", value=certs[0] if certs else '')
-                r2c1, r2c2, r2c3, r2c4, r2c5, r2c6 = st.columns([2, 2, 1, 1, 1.5, 1.5])
+                r2c0, r2c1, r2c2, r2c3, r2c4, r2c5, r2c6 = st.columns([2, 2, 2, 1, 1, 1.5, 1.5])
+                with r2c0:
+                    num_pedido_item = st.text_input("Nº Pedido", key=f"ped_{i}",
+                                                    value=of_obj.numero_pedido or '')
                 with r2c1:
                     codigo_peca = st.text_input("Código da Peça", key=f"cod_{i}",
-                                                value=of_obj.numero_modelo or '')
+                                                value=of_obj.numero_desenho or '')
                 with r2c2:
                     descricao = st.text_input("Descrição", key=f"desc_{i}",
                                               value=of_obj.descricao_peca or '')
@@ -3842,7 +3845,7 @@ def pagina_nova_oe():
                 preco_total = qtd * preco_unit
                 st.caption(f"💰 Preço Total: R$ {preco_total:,.2f}")
                 itens.append({
-                    'pedido': of_obj.numero_pedido or '',
+                    'pedido': num_pedido_item,
                     'of': of_item,
                     'referencia': referencia,
                     'liga': liga,
