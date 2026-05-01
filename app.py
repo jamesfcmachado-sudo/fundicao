@@ -3858,11 +3858,48 @@ def pagina_nova_oe():
         total_val_oe = sum(it.get('preco_total', 0) for it in itens)
         st.info(f"**Total da OE:** {total_qtd_oe} peças  |  R$ {total_val_oe:,.2f}")
 
-        # ── Ações ────────────────────────────────────────────────────────────
+        # ── Resumo e confirmação antes de gravar ─────────────────────────────
         st.divider()
+
+        # Mostra resumo dos itens preenchidos
+        itens_preenchidos = [it for it in itens if it.get('qtd', 0) > 0]
+        itens_vazios = [i+1 for i, it in enumerate(itens) if it.get('qtd', 0) == 0]
+
+        with st.container(border=True):
+            st.markdown("### 📋 Resumo da OE antes de gravar")
+            st.info(
+                f"**Total de linhas:** {len(itens)}  |  "
+                f"**Linhas preenchidas (qtd > 0):** {len(itens_preenchidos)}  |  "
+                f"**Total de peças:** {total_qtd_oe}  |  "
+                f"**Valor total:** R$ {total_val_oe:,.2f}"
+            )
+            if itens_vazios:
+                st.warning(
+                    f"⚠️ As linhas **{', '.join(str(i) for i in itens_vazios)}** "
+                    f"estão com quantidade zero e **não serão gravadas**. "
+                    f"Se faltam itens, ajuste o número de linhas acima antes de gravar."
+                )
+            if itens_preenchidos:
+                import pandas as _pd_resumo
+                _df_resumo = _pd_resumo.DataFrame([{
+                    "Item": i+1,
+                    "OF": it.get("of",""),
+                    "Referência": it.get("referencia",""),
+                    "Liga": it.get("liga",""),
+                    "Corrida": it.get("corrida",""),
+                    "Cert.": it.get("certificado",""),
+                    "Qtd": it.get("qtd",0),
+                    "Preço Total": f"R$ {it.get('preco_total',0):,.2f}",
+                } for i, it in enumerate(itens_preenchidos)])
+                st.dataframe(_df_resumo, use_container_width=True, hide_index=True)
+
+            st.markdown("**⚠️ Após gravar não é possível editar. Verifique se todos os itens estão corretos.**")
+
+        # ── Ações ────────────────────────────────────────────────────────────
         col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
         with col_btn1:
-            gravar = st.button("💾 Gravar OE", type="primary", use_container_width=True)
+            gravar = st.button("💾 Gravar OE", type="primary", use_container_width=True,
+                               disabled=total_qtd_oe == 0)
         with col_btn2:
             gerar_pdf = st.button("📄 Gerar PDF", use_container_width=True)
 
