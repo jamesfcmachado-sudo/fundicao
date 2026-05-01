@@ -3808,7 +3808,10 @@ def pagina_nova_oe():
         for i in range(int(n_linhas)):
             with st.container(border=True):
                 st.caption(f"Item {i+1}")
-                r1c1, r1c2, r1c3, r1c4 = st.columns([2, 1.5, 1.5, 2])
+                r1c0, r1c1, r1c2, r1c3, r1c4 = st.columns([1.5, 2, 1.5, 1.5, 2])
+                with r1c0:
+                    of_item = st.text_input("Nº OF", key=f"of_{i}",
+                                            value=of_obj.numero_of or '')
                 with r1c1:
                     referencia = st.text_input("Referência", key=f"ref_{i}",
                                                value=of_obj.numero_desenho or '')
@@ -3840,7 +3843,7 @@ def pagina_nova_oe():
                 st.caption(f"💰 Preço Total: R$ {preco_total:,.2f}")
                 itens.append({
                     'pedido': of_obj.numero_pedido or '',
-                    'of': of_obj.numero_of,
+                    'of': of_item,
                     'referencia': referencia,
                     'liga': liga,
                     'corrida': corrida,
