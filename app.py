@@ -4125,7 +4125,7 @@ def pagina_nova_oe():
                                nome_cliente, num_pedido
                         FROM oe_item
                         WHERE numero_oe = :noe
-                        ORDER BY id
+                        ORDER BY criado_em, id
                     """), {"noe": _oe_num_ger.strip()}).fetchall()
                     _ofs_ger = _conn_ger.execute(_text_ger(
                         "SELECT numero_of FROM ordem_fabricacao ORDER BY numero_of"
@@ -4146,7 +4146,7 @@ def pagina_nova_oe():
                                    nome_cliente, num_pedido
                             FROM oe_item
                             WHERE numero_oe LIKE :noe
-                            ORDER BY id
+                            ORDER BY criado_em, id
                         """), {"noe": f"%{_oe_num_ger.strip()}%"}).fetchall()
 
                 if not _itens_ger:
@@ -4494,7 +4494,7 @@ def pagina_consulta_oes():
                                        observacoes
                                 FROM oe_item
                                 WHERE numero_oe = :oe
-                                ORDER BY id
+                                ORDER BY criado_em, id
                             """), {"oe": str(_noe)}).fetchall()
 
                         if not _itens_oe:
