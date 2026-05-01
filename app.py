@@ -190,7 +190,7 @@ def _montar_linhas_of(ofs_list) -> list[dict]:
     for of in ofs_list:
         oes   = list(of.ordens_entrega or [])
         certs = list(of.certificados   or [])
-        oes_str   = ", ".join(o.numero_oe          for o in oes   if o.numero_oe)
+        oes_str   = " ".join(f"({o.numero_oe}-{int(o.qtd_pecas or 0)})" for o in oes if o.numero_oe)
         certs_str = ", ".join(c.numero_certificado for c in certs if c.numero_certificado)
 
         # Usa mapa SQL como fonte primária
@@ -4059,6 +4059,7 @@ def pagina_nova_oe():
                                 # Atualiza peso unitário se informado na OE
                                 if _nof in _peso_por_of:
                                     _of_exp.peso_liquido_kg = _peso_por_of[_nof]
+
                                 st.info(f"✅ OF **{_nof}** atualizada: +{_qtd} peças expedidas.")
                 except Exception as _ex_exp:
                     st.warning(f"OE gravada mas erro ao atualizar qtd_expedida: {_ex_exp}")
