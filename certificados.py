@@ -1664,7 +1664,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         [pl(outros or ""), pl("")],
         [pl(""), pl("")],
     ], colWidths=[W*0.85, W*0.15],
-       rowHeights=[None, 16*mm, 16*mm])
+       rowHeights=[None, 8*mm, 8*mm])
     out_tbl.setStyle(TableStyle([
         ("BACKGROUND",   (0,0),(-1,0), CINZA),
         ("BOX",          (0,0),(-1,-1), 0.5, BK),
