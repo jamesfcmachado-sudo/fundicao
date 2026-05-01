@@ -1,7 +1,6 @@
 """
 Conexão SQLAlchemy com o PostgreSQL do Supabase.
-Substitui o fundicao_db.py original (SQLite) — mantém a mesma interface
-para que o app.py funcione sem alterações de lógica.
+Otimizado com cache de engine e session para performance máxima.
 """
 
 from __future__ import annotations
@@ -9,12 +8,12 @@ from __future__ import annotations
 import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
+from contextlib import contextmanager
 
 from sqlite_models import Base
 
-# ── Lê DATABASE_URL do ambiente (Streamlit Secrets ou variável de ambiente) ──
+
 def _get_database_url() -> str:
-    # 1) Tenta Streamlit secrets (produção no Streamlit Cloud)
     try:
         import streamlit as st
         url = st.secrets["DATABASE_URL"]
@@ -23,7 +22,6 @@ def _get_database_url() -> str:
     except Exception:
         pass
 
-    # 2) Tenta variável de ambiente (local com .env)
     url = os.environ.get("DATABASE_URL", "")
     if url:
         return url
@@ -34,26 +32,49 @@ def _get_database_url() -> str:
     )
 
 
-DATABASE_URL = _get_database_url()
+def _build_engine():
+    """Cria o engine com configurações otimizadas para Supabase."""
+    DATABASE_URL = _get_database_url()
 
-# Garante o driver correto para SQLAlchemy
-# Supabase retorna postgresql:// — SQLAlchemy 2.x precisa de postgresql+psycopg2://
-if DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+    if DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 
-# Adiciona sslmode=require se não estiver presente
-if "sslmode" not in DATABASE_URL:
-    sep = "&" if "?" in DATABASE_URL else "?"
-    DATABASE_URL = f"{DATABASE_URL}{sep}sslmode=require"
+    if "sslmode" not in DATABASE_URL:
+        sep = "&" if "?" in DATABASE_URL else "?"
+        DATABASE_URL = f"{DATABASE_URL}{sep}sslmode=require"
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
-    echo=False,
-)
+    return create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=10,          # mais conexões simultâneas
+        max_overflow=20,
+        pool_timeout=30,
+        pool_recycle=300,      # recicla conexões a cada 5 min
+        echo=False,
+        connect_args={
+            "connect_timeout": 10,
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5,
+        }
+    )
+
+
+# Tenta usar cache do Streamlit para manter o engine entre reruns
+try:
+    import streamlit as st
+
+    @st.cache_resource(show_spinner=False)
+    def _get_cached_engine():
+        return _build_engine()
+
+    engine = _get_cached_engine()
+
+except Exception:
+    engine = _build_engine()
+
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -65,7 +86,6 @@ SessionLocal = sessionmaker(
 
 
 def init_db() -> None:
-    """Cria as tabelas se não existirem (idempotente)."""
     Base.metadata.create_all(bind=engine)
 
 

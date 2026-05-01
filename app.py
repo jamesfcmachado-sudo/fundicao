@@ -327,7 +327,7 @@ def _gerar_pdf_ofs(df: "pd.DataFrame") -> bytes:
     doc.build(story)
     return buf.getvalue()
 
-@st.cache_data(ttl=30, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def _carregar_status_map() -> dict:
     """Carrega status_of de todas as OFs em uma única query (PostgreSQL compatível). Cache de 30s."""
     try:
