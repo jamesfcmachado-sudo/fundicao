@@ -360,6 +360,27 @@ def _status_of_rapido(of: "OrdemFabricacao", status_map: dict) -> str:
     return "Aberta"
 
 
+@st.cache_data(ttl=120, show_spinner=False)
+def _carregar_dashboard_ofs():
+    """Carrega todas as OFs para o dashboard. Cache de 2 minutos."""
+    try:
+        from fundicao_db import engine as _eng
+        from sqlalchemy import text as _t
+        with _eng.connect() as _conn:
+            rows = _conn.execute(_t("""
+                SELECT id, numero_of, nome_cliente, descricao_peca,
+                       qtd_pecas_pedido, qtd_fundida, qtd_expedida,
+                       liga, peso_liquido_kg, peso_bruto_kg,
+                       valor_unitario, status_of, numero_pedido,
+                       numero_desenho, numero_modelo, data_prazo
+                FROM ordem_fabricacao
+                ORDER BY id DESC
+            """)).fetchall()
+            return [dict(r._mapping) for r in rows]
+    except Exception as e:
+        return []
+
+
 def pagina_dashboard():
     st.title("Dashboard da Fundição")
 
@@ -4284,6 +4305,40 @@ def pagina_nova_oe():
 # ══════════════════════════════════════════════════════════════════════════════
 # MÓDULO: CONSULTA DE ORDENS DE ENTREGA
 # ══════════════════════════════════════════════════════════════════════════════
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _carregar_oes_cache(f_oe="", f_cliente="", f_of=""):
+    """Carrega OEs com filtros básicos. Cache de 60s."""
+    try:
+        from fundicao_db import engine as _eng
+        from sqlalchemy import text as _t
+        query = """
+            SELECT i.numero_oe, i.num_of, i.nome_cliente, i.num_pedido,
+                   i.referencia, i.liga, i.corrida, i.certificado,
+                   i.cod_peca, i.descricao, i.peso_unit, i.qtd,
+                   i.serie, i.preco_unit, i.preco_total, i.criado_em,
+                   oe.observacao, oe.data_entrega
+            FROM oe_item i
+            LEFT JOIN ordem_entrega oe ON oe.numero_oe = i.numero_oe
+            WHERE 1=1
+        """
+        params = {}
+        if f_oe.strip():
+            query += " AND i.numero_oe ILIKE :oe"
+            params["oe"] = f"%{f_oe.strip()}%"
+        if f_cliente.strip():
+            query += " AND i.nome_cliente ILIKE :cli"
+            params["cli"] = f"%{f_cliente.strip()}%"
+        if f_of.strip():
+            query += " AND i.num_of ILIKE :of"
+            params["of"] = f"%{f_of.strip()}%"
+        query += " ORDER BY i.numero_oe DESC, i.criado_em, i.id LIMIT 5000"
+        with _eng.connect() as _conn:
+            rows = _conn.execute(_t(query), params).fetchall()
+            return [dict(r._mapping) for r in rows]
+    except Exception as e:
+        return []
+
 
 def pagina_consulta_oes():
     """Consulta, filtros e relatório de Ordens de Entrega."""
