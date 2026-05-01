@@ -456,6 +456,7 @@ def pagina_dashboard():
             "Peso Bruto (kg)": st.column_config.NumberColumn("Peso Bruto (kg)", format="%.2f"),
             "Vlr Unit. (R$)":  st.column_config.NumberColumn("Vlr Unit. (R$)",  format="%.2f"),
             "Vlr Total (R$)":  st.column_config.NumberColumn("Vlr Total (R$)",  format="%.2f"),
+            "Nº OE":           st.column_config.TextColumn("Nº OE",             width="large", help="Clique para ver todas as OEs"),
         }
 
         _altura_dash = st.slider("Altura da tabela (linhas)", min_value=200, max_value=1200, value=400, step=50, key="altura_dash")
@@ -1219,17 +1220,47 @@ def pagina_consulta_rastreabilidade() -> None:
                 "Vlr Total (R$)":  st.column_config.NumberColumn("Vlr Total(R$)",  width="small", format="%.2f"),
                 "Cond. Modelo":    st.column_config.TextColumn("Cond. Modelo",     width="medium"),
                 "Observações":     st.column_config.TextColumn("Observações",      width="large"),
-                "Nº OE":           st.column_config.TextColumn("Nº OE",            width="large"),
+                "Nº OE":           st.column_config.TextColumn("Nº OE",            width="large", help="Clique na célula para ver o conteúdo completo"),
                 "Nº Certificado":  st.column_config.TextColumn("Nº Certificado",   width="large"),
             }
 
-            st.dataframe(
+            # Seleção de linha para ver detalhes das OEs
+            _sel_of = st.dataframe(
                 _df_rast,
                 height=500,
                 use_container_width=True,
                 hide_index=True,
                 column_config=_RAST_COL_CFG,
+                selection_mode="single-row",
+                on_select="rerun",
+                key="df_rast_sel",
             )
+
+            # Painel de detalhes ao selecionar uma linha
+            _rows_sel = _sel_of.selection.get("rows", []) if _sel_of else []
+            if _rows_sel:
+                _idx = _rows_sel[0]
+                _of_sel = _df_rast.iloc[_idx]
+                _noe_completo = _of_sel.get("Nº OE", "") or ""
+                _cert_completo = _of_sel.get("Nº Certificado", "") or ""
+                with st.expander(f"📋 Detalhes da OF **{_of_sel.get('Nº OF','')}** — {_of_sel.get('Cliente','')}", expanded=True):
+                    _dc1, _dc2 = st.columns(2)
+                    with _dc1:
+                        st.markdown("**Ordens de Entrega (OEs):**")
+                        if _noe_completo:
+                            for _oe_item in _noe_completo.replace(")(", ") (").split(" "):
+                                if _oe_item.strip():
+                                    st.markdown(f"• {_oe_item.strip()}")
+                        else:
+                            st.caption("Nenhuma OE registrada")
+                    with _dc2:
+                        st.markdown("**Certificados:**")
+                        if _cert_completo:
+                            for _cert in _cert_completo.split(","):
+                                if _cert.strip():
+                                    st.markdown(f"• {_cert.strip()}")
+                        else:
+                            st.caption("Nenhum certificado registrado")
 
 
 CORRIDAS_CONSULTA_CAMPOS: list[tuple[str, str, str]] = [
@@ -1517,7 +1548,7 @@ def pagina_relatorios() -> None:
                 "Vlr Total (R$)":  st.column_config.NumberColumn("Vlr Total(R$)",  width="small", format="%.2f"),
                 "Cond. Modelo":    st.column_config.TextColumn("Cond. Modelo",     width="medium"),
                 "Observações":     st.column_config.TextColumn("Observações",      width="large"),
-                "Nº OE":           st.column_config.TextColumn("Nº OE",            width="large"),
+                "Nº OE":           st.column_config.TextColumn("Nº OE",            width="large", help="Clique na célula para ver o conteúdo completo"),
                 "Nº Certificado":  st.column_config.TextColumn("Nº Certificado",   width="large"),
             }
 
