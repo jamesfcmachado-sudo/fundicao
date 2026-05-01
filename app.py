@@ -1522,28 +1522,33 @@ def pagina_relatorios() -> None:
             st.download_button("⬇️ Baixar CSV — OFs completo", buf.getvalue(), file_name="relatorio_ofs.csv", mime="text/csv")
 
             # ── Campo de localizar OF ─────────────────────────────────────
-            _busca_of = st.text_input(
-                "🔍 Localizar OF pelo número",
-                placeholder="Ex: 015B6",
-                key="busca_of_relatorio",
-                help="Digite o número da OF para selecionar automaticamente na tabela abaixo"
-            ).strip().upper()
+            _col_busca, _col_btn = st.columns([3, 1])
+            with _col_busca:
+                _busca_of_input = st.text_input(
+                    "🔍 Localizar OF pelo número",
+                    placeholder="Ex: 015B6",
+                    key="busca_of_input",
+                ).strip().upper()
+            with _col_btn:
+                st.markdown("<br>", unsafe_allow_html=True)
+                _btn_buscar = st.button("🔍 Buscar", key="btn_buscar_of", use_container_width=True)
 
-            # Se digitou um número, tenta selecionar automaticamente
-            _idx_of_busca = None
-            if _busca_of and "Nº OF" in df_display_of.columns:
-                _match = df_display_of[df_display_of["Nº OF"].str.upper() == _busca_of]
-                if not _match.empty:
-                    _idx_of_busca = _match.index[0]
-                    st.success(f"✅ OF **{_busca_of}** encontrada — clique na linha da tabela ou role até ela.")
-                else:
-                    st.warning(f"⚠️ OF **{_busca_of}** não encontrada.")
+            if _btn_buscar and _busca_of_input:
+                st.session_state["of_localizada"] = _busca_of_input
 
-            # Identifica linha selecionada — usa _df_ids_of para garantir correspondência correta
+            _of_localizada = st.session_state.get("of_localizada", "")
+
+            # Identifica linha selecionada pela tabela
             _idx_of = (sel_of.selection.rows or [None])[0]
-            # Se buscou e não selecionou na tabela, usa o resultado da busca
-            if _idx_of is None and _idx_of_busca is not None:
-                _idx_of = _idx_of_busca
+
+            # Se tem OF localizada via busca, usa ela diretamente
+            if _of_localizada and not _idx_of:
+                _match = df_display_of[df_display_of["Nº OF"].str.upper() == _of_localizada.upper()] if "Nº OF" in df_display_of.columns else pd.DataFrame()
+                if not _match.empty:
+                    _idx_of = _match.index[0]
+                else:
+                    st.warning(f"⚠️ OF **{_of_localizada}** não encontrada.")
+                    st.session_state.pop("of_localizada", None)
             if _idx_of is not None and _idx_of < len(_df_ids_of):
                 _of_id_sel  = _df_ids_of[_idx_of]
                 _nof_sel    = df_display_of.iloc[_idx_of]["Nº OF"] if "Nº OF" in df_display_of.columns else ""
@@ -1556,7 +1561,8 @@ def pagina_relatorios() -> None:
                     # ── Alterar ──────────────────────────────────────────────
                     if pode_alterar_of:
                      with _col_alt:
-                      with st.expander("✏️ Alterar dados desta OF", expanded=False):
+                      _expander_aberto = bool(st.session_state.get("of_localizada", ""))
+                      with st.expander("✏️ Alterar dados desta OF", expanded=_expander_aberto):
                             try:
                                 with db_session() as _db_ed:
                                     _of_ed = _db_ed.scalar(
