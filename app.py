@@ -1521,8 +1521,29 @@ def pagina_relatorios() -> None:
             df_display_of.to_csv(buf, index=False)
             st.download_button("⬇️ Baixar CSV — OFs completo", buf.getvalue(), file_name="relatorio_ofs.csv", mime="text/csv")
 
+            # ── Campo de localizar OF ─────────────────────────────────────
+            _busca_of = st.text_input(
+                "🔍 Localizar OF pelo número",
+                placeholder="Ex: 015B6",
+                key="busca_of_relatorio",
+                help="Digite o número da OF para selecionar automaticamente na tabela abaixo"
+            ).strip().upper()
+
+            # Se digitou um número, tenta selecionar automaticamente
+            _idx_of_busca = None
+            if _busca_of and "Nº OF" in df_display_of.columns:
+                _match = df_display_of[df_display_of["Nº OF"].str.upper() == _busca_of]
+                if not _match.empty:
+                    _idx_of_busca = _match.index[0]
+                    st.success(f"✅ OF **{_busca_of}** encontrada — clique na linha da tabela ou role até ela.")
+                else:
+                    st.warning(f"⚠️ OF **{_busca_of}** não encontrada.")
+
             # Identifica linha selecionada — usa _df_ids_of para garantir correspondência correta
             _idx_of = (sel_of.selection.rows or [None])[0]
+            # Se buscou e não selecionou na tabela, usa o resultado da busca
+            if _idx_of is None and _idx_of_busca is not None:
+                _idx_of = _idx_of_busca
             if _idx_of is not None and _idx_of < len(_df_ids_of):
                 _of_id_sel  = _df_ids_of[_idx_of]
                 _nof_sel    = df_display_of.iloc[_idx_of]["Nº OF"] if "Nº OF" in df_display_of.columns else ""
