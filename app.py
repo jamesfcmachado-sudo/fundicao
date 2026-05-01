@@ -4134,7 +4134,37 @@ def pagina_nova_oe():
                 _ofs_lista_ger = [r[0] for r in _ofs_ger]
 
                 if not _itens_ger:
-                    st.warning(f"OE {_oe_num_ger} não encontrada.")
+                    # Tenta busca mais ampla (LIKE) caso o número tenha formatação diferente
+                    with _eng_ger.connect() as _conn_ger2:
+                        _itens_ger = _conn_ger2.execute(_text_ger("""
+                            SELECT id, num_of, referencia, liga, corrida,
+                                   certificado, cod_peca, descricao,
+                                   peso_unit, qtd, serie, preco_unit, preco_total,
+                                   nome_cliente, num_pedido
+                            FROM oe_item
+                            WHERE numero_oe LIKE :noe
+                            ORDER BY id
+                        """), {"noe": f"%{_oe_num_ger.strip()}%"}).fetchall()
+
+                if not _itens_ger:
+                    # Tenta excluir diretamente mesmo sem itens (OE pode estar só em ordem_entrega)
+                    with _eng_ger.connect() as _conn_ger3:
+                        _oe_exists = _conn_ger3.execute(_text_ger(
+                            "SELECT numero_oe FROM ordem_entrega WHERE numero_oe=:noe"
+                        ), {"noe": _oe_num_ger.strip()}).fetchone()
+                    if _oe_exists:
+                        st.warning(f"OE {_oe_num_ger} encontrada em ordem_entrega mas sem itens em oe_item.")
+                        if st.button(f"🗑️ Excluir OE {_oe_num_ger} mesmo assim", key="btn_excluir_sem_itens", type="primary"):
+                            from fundicao_db import engine as _eng_del_si
+                            from sqlalchemy import text as _text_del_si
+                            with _eng_del_si.begin() as _conn_del_si:
+                                _conn_del_si.execute(_text_del_si(
+                                    "DELETE FROM ordem_entrega WHERE numero_oe=:noe"),
+                                    {"noe": _oe_num_ger.strip()})
+                            st.success(f"✅ OE {_oe_num_ger} excluída!")
+                            st.rerun()
+                    else:
+                        st.warning(f"OE {_oe_num_ger} não encontrada.")
                 else:
                     st.success(f"OE {_oe_num_ger} encontrada — {len(_itens_ger)} item(ns)")
 
