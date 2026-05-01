@@ -1663,7 +1663,8 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         [ph("VI - OUTROS ENSAIOS / OTHER TESTS"), ph("ANEXO\nATTACHED")],
         [pl(outros or ""), pl("")],
         [pl(""), pl("")],
-    ], colWidths=[W*0.85, W*0.15])
+    ], colWidths=[W*0.85, W*0.15],
+       rowHeights=[None, 16*mm, 16*mm])
     out_tbl.setStyle(TableStyle([
         ("BACKGROUND",   (0,0),(-1,0), CINZA),
         ("BOX",          (0,0),(-1,-1), 0.5, BK),
