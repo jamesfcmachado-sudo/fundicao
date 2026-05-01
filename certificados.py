@@ -1270,20 +1270,36 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
             alignment=TA_LEFT, leading=sz+2))
 
     def fmt_num(v):
-        """Formata numero com casas decimais variaveis como no template."""
+        """Formata numero com casas decimais fixas por coluna."""
         try:
             f = float(v or 0)
             if f == 0: return ""
-            # Usa 4 casas e remove zeros a direita
-            s = f"{f:.4f}"
-            # Remove zeros a direita apos a virgula
-            s = s.rstrip("0").rstrip(".")
-            # Garante pelo menos 1 casa decimal
+            s = f"{f:.4f}".rstrip("0").rstrip(".")
             if "." not in s:
                 s = s + ".0"
             return s.replace(".", ",")
         except Exception:
             return str(v or "")
+
+    def _fmt_elem_col(val, all_vals):
+        """Formata valor usando o máximo de casas decimais da coluna."""
+        try:
+            f = float(val or 0)
+            if f == 0: return ""
+            # Determina máximo de casas decimais na coluna
+            max_dec = 1
+            for v2 in all_vals:
+                try:
+                    fv = float(v2 or 0)
+                    if fv == 0: continue
+                    s2 = f"{fv:.4f}".rstrip("0")
+                    if "." in s2:
+                        dec = len(s2.split(".")[1])
+                        max_dec = max(max_dec, dec)
+                except: pass
+            return f"{f:.{max_dec}f}".replace(".", ",")
+        except:
+            return str(val or "")
 
     story = []
 
@@ -1509,13 +1525,20 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
     comp_hdr2 = [ph(""),   ph("HEAT Nº")] + [ph("") for _ in ELEM]
     comp_rows = [comp_hdr1, comp_hdr2]
 
+    # Pré-calcula todos os valores por coluna para determinar casas decimais uniformes
+    _vals_por_elem = {ek: [] for ek in ELEM_KEYS}
+    for corr in corridas:
+        _cm = corr._mapping if hasattr(corr, "_mapping") else {}
+        for ek in ELEM_KEYS:
+            _vals_por_elem[ek].append(_cm.get(ek, 0))
+
     for corr in corridas:
         _cm = corr._mapping if hasattr(corr, "_mapping") else {}
         _nof   = str(_cm.get("numero_of","") or "")
         _ncorr = str(_cm.get("numero_corrida","") or "")
         row = [pc(_nof), pc(_ncorr)]
         for ek in ELEM_KEYS:
-            row.append(pc(fmt_num(_cm.get(ek, 0))))
+            row.append(pc(_fmt_elem_col(_cm.get(ek, 0), _vals_por_elem[ek])))
         comp_rows.append(row)
 
     while len(comp_rows) < 10:
@@ -1663,8 +1686,7 @@ def gerar_certificado_pdf(cert_data, corridas, itens, ensaios=None):
         [ph("VI - OUTROS ENSAIOS / OTHER TESTS"), ph("ANEXO\nATTACHED")],
         [pl(outros or ""), pl("")],
         [pl(""), pl("")],
-    ], colWidths=[W*0.85, W*0.15],
-       rowHeights=[None, 8*mm, 8*mm])
+    ], colWidths=[W*0.85, W*0.15])
     out_tbl.setStyle(TableStyle([
         ("BACKGROUND",   (0,0),(-1,0), CINZA),
         ("BOX",          (0,0),(-1,-1), 0.5, BK),
