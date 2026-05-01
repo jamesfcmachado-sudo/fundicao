@@ -190,8 +190,20 @@ def _montar_linhas_of(ofs_list) -> list[dict]:
     for of in ofs_list:
         oes   = list(of.ordens_entrega or [])
         certs = list(of.certificados   or [])
-        oes_str   = ", ".join(o.numero_oe          for o in oes   if o.numero_oe)
-        certs_str = ", ".join(c.numero_certificado for c in certs if c.numero_certificado)
+        def _fmt_oe(o):
+            import re as _re
+            noe = _re.sub(r'[()]', '', str(o.numero_oe or '')).strip()
+            if '-' in noe:
+                noe = noe.split('-')[0].strip()
+            if not _re.match(r'^\d+$', noe):
+                return None
+            return f"({noe}-{int(o.qtd_pecas or 0)})"
+        oes_str = " ".join(r for o in oes if o.numero_oe for r in [_fmt_oe(o)] if r)
+
+        certs_str = " ".join(
+            f"({c.numero_certificado.split('/')[0]}-{int(c.qtd_pecas or 0)})"
+            for c in certs if c.numero_certificado
+        )
 
         # Usa mapa SQL como fonte primária
         _of_status = _status_map.get(of.numero_of, "Ativa")
