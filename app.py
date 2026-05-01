@@ -3984,7 +3984,6 @@ def pagina_nova_oe():
 
                 st.session_state['_oe_gravada_num'] = numero_oe_str
                 st.session_state['_confirmar_regravar'] = False
-                st.balloons()
                 st.success(f"🎉 OE Nº {numero_oe_str} GRAVADA COM SUCESSO!")
                 st.markdown(
                     f"""
