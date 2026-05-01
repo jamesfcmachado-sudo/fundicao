@@ -3899,10 +3899,26 @@ def pagina_nova_oe():
             st.markdown("**⚠️ Após gravar não é possível editar. Verifique se todos os itens estão corretos.**")
 
         # ── Ações ────────────────────────────────────────────────────────────
+        # Verifica se esta OE já foi gravada nesta sessão
+        _oe_ja_gravada = st.session_state.get('_oe_gravada_num', '') == str(int(num_oe))
+
+        if _oe_ja_gravada:
+            st.success("✅ OE já gravada nesta sessão!")
+
         col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
         with col_btn1:
-            gravar = st.button("💾 Gravar OE", type="primary", use_container_width=True,
-                               disabled=total_qtd_oe == 0)
+            if _oe_ja_gravada:
+                gravar = st.button("⚠️ Gravar novamente?", use_container_width=True)
+                if gravar:
+                    gravar = st.session_state.get('_confirmar_regravar', False)
+                    if not gravar:
+                        st.session_state['_confirmar_regravar'] = False
+                        st.warning("⚠️ Esta OE já foi gravada! Clique novamente para confirmar.")
+                        gravar = False
+            else:
+                gravar = st.button("💾 Gravar OE", type="primary", use_container_width=True,
+                                   disabled=total_qtd_oe == 0)
+                st.session_state['_confirmar_regravar'] = False
         with col_btn2:
             gerar_pdf = st.button("📄 Gerar PDF", use_container_width=True)
 
@@ -3966,7 +3982,23 @@ def pagina_nova_oe():
                             "obs":     observacoes or "",
                         })
 
-                st.success(f"✅ OE Nº {numero_oe_str} gravada com sucesso!")
+                st.session_state['_oe_gravada_num'] = numero_oe_str
+                st.session_state['_confirmar_regravar'] = False
+                st.balloons()
+                st.success(f"🎉 OE Nº {numero_oe_str} GRAVADA COM SUCESSO!")
+                st.markdown(
+                    f"""
+                    <div style='text-align:center; padding: 20px; background: #d4edda;
+                                border-radius: 12px; border: 2px solid #28a745; margin: 10px 0;'>
+                        <h1 style='color:#155724; font-size:48px; margin:0;'>✅</h1>
+                        <h2 style='color:#155724; margin:5px 0;'>OE {numero_oe_str} GRAVADA!</h2>
+                        <p style='color:#155724; font-size:16px; margin:0;'>
+                            {total_qtd_oe} peças — R$ {total_val_oe:,.2f}
+                        </p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
                 # Atualiza qtd_expedida nas OFs somando qtd de cada item
                 try:
