@@ -191,7 +191,7 @@ def _montar_linhas_of(ofs_list) -> list[dict]:
         oes   = list(of.ordens_entrega or [])
         certs = list(of.certificados   or [])
         oes_str   = " ".join(f"({o.numero_oe}-{int(o.qtd_pecas or 0)})" for o in oes if o.numero_oe)
-        certs_str = ", ".join(c.numero_certificado for c in certs if c.numero_certificado)
+        certs_str = " ".join(f"({c.numero_certificado.split("/")[0]}-{int(c.qtd_pecas or 0)})" for c in certs if c.numero_certificado)
 
         # Usa mapa SQL como fonte primária
         _of_status = _status_map.get(of.numero_of, "Ativa")
@@ -4332,6 +4332,46 @@ def pagina_nova_oe():
                                             "serie": _it_e["serie"],
                                             "pt": _pt,
                                         })
+                                # Atualiza OFs com peso, preço unitário e qtd_expedida
+                                try:
+                                    from sqlite_models import OrdemFabricacao
+                                    from sqlalchemy.orm import Session
+                                    from sqlalchemy import select as _sel_upd
+                                    _qtd_por_of = {}
+                                    _pu_por_of = {}
+                                    _peso_por_of = {}
+                                    for _it_e in _itens_edit:
+                                        _nof = _it_e["num_of"].strip()
+                                        _qtd = int(_it_e["qtd"] or 0)
+                                        _pu = float(_it_e["preco_unit"] or 0)
+                                        _peso = float(_it_e.get("peso_unit", 0) or 0)
+                                        if _nof and _qtd > 0:
+                                            _qtd_por_of[_nof] = _qtd_por_of.get(_nof, 0) + _qtd
+                                        if _nof and _pu > 0:
+                                            _pu_por_of[_nof] = _pu
+                                        if _nof and _peso > 0:
+                                            _peso_por_of[_nof] = _peso
+
+                                    with Session(_eng_upd_g) as _sess_upd:
+                                        for _nof, _qtd in _qtd_por_of.items():
+                                            _of_upd = _sess_upd.scalar(
+                                                _sel_upd(OrdemFabricacao).where(OrdemFabricacao.numero_of == _nof)
+                                            )
+                                            if _of_upd:
+                                                # Recalcula qtd_expedida somando todos os itens desta OE
+                                                _qtd_total_of = _conn_upd_g.execute(_text_upd_g("""
+                                                    SELECT COALESCE(SUM(qtd),0) FROM oe_item
+                                                    WHERE num_of=:nof
+                                                """), {"nof": _nof}).scalar()
+                                                _of_upd.qtd_expedida = int(_qtd_total_of or 0)
+                                                if _nof in _pu_por_of:
+                                                    _of_upd.valor_unitario = _pu_por_of[_nof]
+                                                if _nof in _peso_por_of:
+                                                    _of_upd.peso_liquido_kg = _peso_por_of[_nof]
+                                        _sess_upd.commit()
+                                except Exception as _e_upd_of:
+                                    st.warning(f"Itens atualizados mas erro ao atualizar OFs: {_e_upd_of}")
+
                                 st.success(f"✅ Todos os {len(_itens_edit)} itens atualizados!")
                                 st.rerun()
                             except Exception as _e_g:
