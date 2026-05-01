@@ -190,8 +190,8 @@ def _montar_linhas_of(ofs_list) -> list[dict]:
     for of in ofs_list:
         oes   = list(of.ordens_entrega or [])
         certs = list(of.certificados   or [])
-        oes_str   = " ".join(f"({o.numero_oe}-{int(o.qtd_pecas or 0)})" for o in oes if o.numero_oe)
-        certs_str = " ".join(f"({c.numero_certificado.split("/")[0]}-{int(c.qtd_pecas or 0)})" for c in certs if c.numero_certificado)
+        oes_str   = ", ".join(o.numero_oe          for o in oes   if o.numero_oe)
+        certs_str = ", ".join(c.numero_certificado for c in certs if c.numero_certificado)
 
         # Usa mapa SQL como fonte primária
         _of_status = _status_map.get(of.numero_of, "Ativa")
@@ -327,7 +327,7 @@ def _gerar_pdf_ofs(df: "pd.DataFrame") -> bytes:
     doc.build(story)
     return buf.getvalue()
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=30, show_spinner=False)
 def _carregar_status_map() -> dict:
     """Carrega status_of de todas as OFs em uma única query (PostgreSQL compatível). Cache de 30s."""
     try:
@@ -358,27 +358,6 @@ def _status_of_rapido(of: "OrdemFabricacao", status_map: dict) -> str:
     if exp > 0:
         return "Expedição parcial"
     return "Aberta"
-
-
-@st.cache_data(ttl=120, show_spinner=False)
-def _carregar_dashboard_ofs():
-    """Carrega todas as OFs para o dashboard. Cache de 2 minutos."""
-    try:
-        from fundicao_db import engine as _eng
-        from sqlalchemy import text as _t
-        with _eng.connect() as _conn:
-            rows = _conn.execute(_t("""
-                SELECT id, numero_of, nome_cliente, descricao_peca,
-                       qtd_pecas_pedido, qtd_fundida, qtd_expedida,
-                       liga, peso_liquido_kg, peso_bruto_kg,
-                       valor_unitario, status_of, numero_pedido,
-                       numero_desenho, numero_modelo, data_prazo
-                FROM ordem_fabricacao
-                ORDER BY id DESC
-            """)).fetchall()
-            return [dict(r._mapping) for r in rows]
-    except Exception as e:
-        return []
 
 
 def pagina_dashboard():
@@ -456,7 +435,6 @@ def pagina_dashboard():
             "Peso Bruto (kg)": st.column_config.NumberColumn("Peso Bruto (kg)", format="%.2f"),
             "Vlr Unit. (R$)":  st.column_config.NumberColumn("Vlr Unit. (R$)",  format="%.2f"),
             "Vlr Total (R$)":  st.column_config.NumberColumn("Vlr Total (R$)",  format="%.2f"),
-            "Nº OE":           st.column_config.TextColumn("Nº OE",             width="large", help="Clique para ver todas as OEs"),
         }
 
         _altura_dash = st.slider("Altura da tabela (linhas)", min_value=200, max_value=1200, value=400, step=50, key="altura_dash")
@@ -1220,47 +1198,17 @@ def pagina_consulta_rastreabilidade() -> None:
                 "Vlr Total (R$)":  st.column_config.NumberColumn("Vlr Total(R$)",  width="small", format="%.2f"),
                 "Cond. Modelo":    st.column_config.TextColumn("Cond. Modelo",     width="medium"),
                 "Observações":     st.column_config.TextColumn("Observações",      width="large"),
-                "Nº OE":           st.column_config.TextColumn("Nº OE",            width="large", help="Clique na célula para ver o conteúdo completo"),
+                "Nº OE":           st.column_config.TextColumn("Nº OE",            width="large"),
                 "Nº Certificado":  st.column_config.TextColumn("Nº Certificado",   width="large"),
             }
 
-            # Seleção de linha para ver detalhes das OEs
-            _sel_of = st.dataframe(
+            st.dataframe(
                 _df_rast,
                 height=500,
                 use_container_width=True,
                 hide_index=True,
                 column_config=_RAST_COL_CFG,
-                selection_mode="single-row",
-                on_select="rerun",
-                key="df_rast_sel",
             )
-
-            # Painel de detalhes ao selecionar uma linha
-            _rows_sel = _sel_of.selection.get("rows", []) if _sel_of else []
-            if _rows_sel:
-                _idx = _rows_sel[0]
-                _of_sel = _df_rast.iloc[_idx]
-                _noe_completo = _of_sel.get("Nº OE", "") or ""
-                _cert_completo = _of_sel.get("Nº Certificado", "") or ""
-                with st.expander(f"📋 Detalhes da OF **{_of_sel.get('Nº OF','')}** — {_of_sel.get('Cliente','')}", expanded=True):
-                    _dc1, _dc2 = st.columns(2)
-                    with _dc1:
-                        st.markdown("**Ordens de Entrega (OEs):**")
-                        if _noe_completo:
-                            for _oe_item in _noe_completo.replace(")(", ") (").split(" "):
-                                if _oe_item.strip():
-                                    st.markdown(f"• {_oe_item.strip()}")
-                        else:
-                            st.caption("Nenhuma OE registrada")
-                    with _dc2:
-                        st.markdown("**Certificados:**")
-                        if _cert_completo:
-                            for _cert in _cert_completo.split(","):
-                                if _cert.strip():
-                                    st.markdown(f"• {_cert.strip()}")
-                        else:
-                            st.caption("Nenhum certificado registrado")
 
 
 CORRIDAS_CONSULTA_CAMPOS: list[tuple[str, str, str]] = [
@@ -1548,7 +1496,7 @@ def pagina_relatorios() -> None:
                 "Vlr Total (R$)":  st.column_config.NumberColumn("Vlr Total(R$)",  width="small", format="%.2f"),
                 "Cond. Modelo":    st.column_config.TextColumn("Cond. Modelo",     width="medium"),
                 "Observações":     st.column_config.TextColumn("Observações",      width="large"),
-                "Nº OE":           st.column_config.TextColumn("Nº OE",            width="large", help="Clique na célula para ver o conteúdo completo"),
+                "Nº OE":           st.column_config.TextColumn("Nº OE",            width="large"),
                 "Nº Certificado":  st.column_config.TextColumn("Nº Certificado",   width="large"),
             }
 
@@ -1644,15 +1592,27 @@ def pagina_relatorios() -> None:
                                     _cond     = st.text_input("Cond. Modelo", value=_of_data["condicao_modelo"])
                                     _obs      = st.text_area("Observações",  value=_of_data["observacoes"])
 
-                                    _sb1, _sb2, _sb3 = st.columns(3)
+                                    # ── Status atual da OF ───────────────────
+                                    _status_atual = _of_data.get("status_of", "") or "Ativa"
+                                    if _status_atual == "Finalizada":
+                                        st.info("📌 **Status atual: FINALIZADA** — Esta OF está encerrada.")
+                                    elif _status_atual == "Cancelada":
+                                        st.warning("🚫 **Status atual: CANCELADA** — Esta OF está cancelada.")
+                                    else:
+                                        st.success("✅ **Status atual: NORMAL** — Esta OF está ativa.")
+
+                                    _sb1, _sb2, _sb3, _sb4 = st.columns(4)
                                     with _sb1:
                                         _salvar = st.form_submit_button("💾 Salvar alterações", type="primary", use_container_width=True)
                                     with _sb2:
                                         _finalizar = st.form_submit_button("✅ Finalizar OF", use_container_width=True)
                                     with _sb3:
                                         _cancelar = st.form_submit_button("🚫 Cancelar OF", use_container_width=True)
+                                    with _sb4:
+                                        _normalizar = st.form_submit_button("🔄 Normal", use_container_width=True,
+                                            help="Reverte para status Normal (remove Finalizada/Cancelada)")
 
-                                    _acao = "salvar" if _salvar else ("finalizar" if _finalizar else ("cancelar" if _cancelar else None))
+                                    _acao = "salvar" if _salvar else ("finalizar" if _finalizar else ("cancelar" if _cancelar else ("normalizar" if _normalizar else None)))
                                     if _acao:
                                         try:
                                             from decimal import Decimal as _Dec
@@ -1709,10 +1669,17 @@ def pagina_relatorios() -> None:
                                                         )
                                                     elif _acao == "cancelar":
                                                         _of_save.status_of = "Cancelada"
-                                                        # UPDATE direto via SQL para garantir gravação
                                                         _db_save.execute(
                                                             __import__("sqlalchemy").text(
                                                                 "UPDATE ordem_fabricacao SET status_of='Cancelada' WHERE numero_of=:nof"
+                                                            ),
+                                                            {"nof": _nof_sel}
+                                                        )
+                                                    elif _acao == "normalizar":
+                                                        _of_save.status_of = "Ativa"
+                                                        _db_save.execute(
+                                                            __import__("sqlalchemy").text(
+                                                                "UPDATE ordem_fabricacao SET status_of='Ativa' WHERE numero_of=:nof"
                                                             ),
                                                             {"nof": _nof_sel}
                                                         )
@@ -1721,7 +1688,8 @@ def pagina_relatorios() -> None:
                                                         pass
                                             _msg = {"salvar": f"OF **{_nof_sel}** atualizada com sucesso!",
                                                     "finalizar": f"OF **{_nof_sel}** marcada como **Finalizada** e removida do dashboard.",
-                                                    "cancelar":  f"OF **{_nof_sel}** marcada como **Cancelada**. Aparecerá com marca d'água no dashboard."}
+                                                    "cancelar":  f"OF **{_nof_sel}** marcada como **Cancelada**. Aparecerá com marca d'água no dashboard.",
+                                                    "normalizar": f"OF **{_nof_sel}** revertida para status **Normal**."}
                                             st.success(_msg[_acao])
                                             st.session_state.pop("sel_df_ofs", None)
                                             st.rerun()
@@ -3890,15 +3858,7 @@ def pagina_nova_oe():
                 with r2c4:
                     qtd = st.number_input("Qtde (pçs)", key=f"qtd_{i}", min_value=0, value=0)
                 with r2c5:
-                    # Calcula série automática baseada na última série expedida
-                    _of_serie = of_item.strip() if of_item.strip() else (of_obj.numero_of or "")
-                    _ultima_serie = _buscar_ultima_serie_of(_of_serie) if _of_serie else 0
-                    _serie_inicio = _ultima_serie + 1
-                    _serie_fim = _ultima_serie + int(qtd) if qtd > 0 else _serie_inicio
-                    _serie_auto = f"{_serie_inicio} A {_serie_fim}" if qtd > 1 else str(_serie_inicio) if qtd == 1 else ""
-                    serie = st.text_input("Série", key=f"serie_{i}",
-                                          value=st.session_state.get(f"serie_{i}", _serie_auto),
-                                          help=f"Última série expedida: {_ultima_serie}. Sugestão automática.")
+                    serie = st.text_input("Série", key=f"serie_{i}")
                 with r2c6:
                     preco_unit = st.number_input("Preço Unit. (R$)", key=f"preco_{i}",
                                                  value=float(of_obj.valor_unitario or 0), min_value=0.0, format="%.4f")
@@ -4073,32 +4033,12 @@ def pagina_nova_oe():
                             if _nof and _qtd > 0:
                                 _qtd_por_of[_nof] = _qtd_por_of.get(_nof, 0) + _qtd
 
-                        # Agrupa também valor unitário e peso unitário por OF
-                        _pu_por_of = {}
-                        _peso_por_of = {}
-                        for it in itens:
-                            _nof = it.get("of", "").strip()
-                            _pu = float(it.get("preco_unit", 0) or 0)
-                            _peso = float(it.get("peso_unit", 0) or 0)
-                            if _nof:
-                                if _pu > 0:
-                                    _pu_por_of[_nof] = _pu
-                                if _peso > 0:
-                                    _peso_por_of[_nof] = _peso
-
                         for _nof, _qtd in _qtd_por_of.items():
                             _of_exp = _db_exp.scalar(
                                 select(OrdemFabricacao).where(OrdemFabricacao.numero_of == _nof)
                             )
                             if _of_exp:
                                 _of_exp.qtd_expedida = int(_of_exp.qtd_expedida or 0) + _qtd
-                                # Atualiza valor unitário se informado na OE
-                                if _nof in _pu_por_of:
-                                    _of_exp.valor_unitario = _pu_por_of[_nof]
-                                # Atualiza peso unitário se informado na OE
-                                if _nof in _peso_por_of:
-                                    _of_exp.peso_liquido_kg = _peso_por_of[_nof]
-
                                 st.info(f"✅ OF **{_nof}** atualizada: +{_qtd} peças expedidas.")
                 except Exception as _ex_exp:
                     st.warning(f"OE gravada mas erro ao atualizar qtd_expedida: {_ex_exp}")
@@ -4205,7 +4145,7 @@ def pagina_nova_oe():
                                nome_cliente, num_pedido
                         FROM oe_item
                         WHERE numero_oe = :noe
-                        ORDER BY criado_em, id
+                        ORDER BY id
                     """), {"noe": _oe_num_ger.strip()}).fetchall()
                     _ofs_ger = _conn_ger.execute(_text_ger(
                         "SELECT numero_of FROM ordem_fabricacao ORDER BY numero_of"
@@ -4226,7 +4166,7 @@ def pagina_nova_oe():
                                    nome_cliente, num_pedido
                             FROM oe_item
                             WHERE numero_oe LIKE :noe
-                            ORDER BY criado_em, id
+                            ORDER BY id
                         """), {"noe": f"%{_oe_num_ger.strip()}%"}).fetchall()
 
                 if not _itens_ger:
@@ -4253,126 +4193,98 @@ def pagina_nova_oe():
 
                     # ── Alterar ──────────────────────────────────────────────
                     with st.expander(f"✏️ Alterar OE {_oe_num_ger}", expanded=False):
-                        st.caption("Edite os campos diretamente na tabela abaixo e clique em Salvar Todos.")
+                        st.caption("Selecione o item a alterar, modifique os campos e clique em Salvar.")
 
                         _edit_obs_ger = st.text_area("Observações gerais",
                             value=_obs_ger or "", key="edit_obs_ger")
 
                         st.divider()
-                        st.markdown("**Edite os itens abaixo (todos de uma vez):**")
+                        st.markdown("**Selecione o item a alterar:**")
 
-                        # Monta lista de dicts para edição em massa
-                        _itens_edit = []
-                        for _ii, _it_r in enumerate(_itens_ger):
-                            _it_d = dict(_it_r._mapping)
-                            with st.container(border=True):
-                                st.caption(f"Item {_ii+1} — {_it_d.get('descricao','')}")
-                                _ea, _eb, _ec, _ed = st.columns([1.5, 2, 2, 1.5])
-                                with _ea:
-                                    _e_of = st.text_input("OF", value=str(_it_d.get("num_of","") or ""), key=f"e_of_{_ii}")
-                                with _eb:
-                                    _e_ped = st.text_input("Nº Pedido", value=str(_it_d.get("num_pedido","") or ""), key=f"e_ped_{_ii}")
-                                with _ec:
-                                    _e_ref = st.text_input("Referência", value=str(_it_d.get("referencia","") or ""), key=f"e_ref_{_ii}")
-                                with _ed:
-                                    _e_cert = st.text_input("Certificado", value=str(_it_d.get("certificado","") or ""), key=f"e_cert_{_ii}")
-                                _ef, _eg, _eh, _ei = st.columns([2, 1.5, 1, 1.5])
-                                with _ef:
-                                    _e_cod = st.text_input("Código Peça", value=str(_it_d.get("cod_peca","") or ""), key=f"e_cod_{_ii}")
-                                with _eg:
-                                    _e_corr = st.text_input("Corrida", value=str(_it_d.get("corrida","") or ""), key=f"e_corr_{_ii}")
-                                with _eh:
-                                    _e_qtd = st.number_input("Qtd", value=int(_it_d.get("qtd",0) or 0), min_value=0, key=f"e_qtd_{_ii}")
-                                with _ei:
-                                    _e_serie = st.text_input("Série", value=str(_it_d.get("serie","") or ""), key=f"e_serie_{_ii}")
-                                _itens_edit.append({
-                                    "id": _it_d["id"],
-                                    "num_of": _e_of,
-                                    "num_pedido": _e_ped,
-                                    "referencia": _e_ref,
-                                    "certificado": _e_cert,
-                                    "cod_peca": _e_cod,
-                                    "corrida": _e_corr,
-                                    "qtd": _e_qtd,
-                                    "serie": _e_serie,
-                                    "preco_unit": float(_it_d.get("preco_unit",0) or 0),
-                                })
+                        _opcoes_ger = {
+                            f"Item {i+1}: OF {dict(it._mapping).get('num_of','')} | {dict(it._mapping).get('referencia','')}": i
+                            for i, it in enumerate(_itens_ger)
+                        }
+                        _item_sel_ger = st.selectbox("Item", options=list(_opcoes_ger.keys()),
+                                                      key="sel_item_ger")
+                        _item_idx_ger = _opcoes_ger[_item_sel_ger]
+                        _item_d_ger = dict(_itens_ger[_item_idx_ger]._mapping)
+                        _of_atual_ger = str(_item_d_ger.get("num_of",""))
 
-                        if st.button("💾 Salvar TODOS os itens", key="btn_salvar_todos_ger", type="primary"):
+                        st.markdown(f"**Editando:** {_item_d_ger.get('referencia','')} — {_item_d_ger.get('descricao','')}")
+
+                        _gc1, _gc2 = st.columns(2)
+                        with _gc1:
+                            _edit_of_ger = st.text_input("OF", value=_of_atual_ger, key="edit_of_ger")
+                            if _edit_of_ger.strip() and _edit_of_ger.strip() not in _ofs_lista_ger:
+                                st.warning(f"OF '{_edit_of_ger}' não encontrada.")
+                            _edit_qtd_ger = st.number_input("Quantidade",
+                                value=int(_item_d_ger.get("qtd",0) or 0),
+                                min_value=0, key="edit_qtd_ger")
+                        with _gc2:
+                            _edit_serie_ger  = st.text_input("Série",
+                                value=str(_item_d_ger.get("serie","") or ""), key="edit_serie_ger")
+                            _edit_corr_ger   = st.text_input("Corrida",
+                                value=str(_item_d_ger.get("corrida","") or ""), key="edit_corr_ger")
+                            _edit_cert_ger   = st.text_input("Certificado",
+                                value=str(_item_d_ger.get("certificado","") or ""), key="edit_cert_ger")
+
+                        if st.button("💾 Salvar alterações deste item", key="btn_salvar_ger",
+                                     type="primary"):
                             try:
                                 from fundicao_db import engine as _eng_upd_g
                                 from sqlalchemy import text as _text_upd_g
+                                _of_edit_g = _edit_of_ger.strip()
                                 with _eng_upd_g.begin() as _conn_upd_g:
                                     _conn_upd_g.execute(_text_upd_g(
                                         "UPDATE ordem_entrega SET observacao=:obs WHERE numero_oe=:noe"
                                     ), {"obs": _edit_obs_ger, "noe": _oe_num_ger.strip()})
-                                    for _it_e in _itens_edit:
-                                        _pt = _it_e["qtd"] * _it_e["preco_unit"]
+
+                                    _upd_g = {
+                                        "id":      _item_d_ger["id"],
+                                        "num_of":  _of_edit_g,
+                                        "qtd":     _edit_qtd_ger,
+                                        "serie":   _edit_serie_ger,
+                                        "corrida": _edit_corr_ger,
+                                        "cert":    _edit_cert_ger,
+                                        "pt":      _edit_qtd_ger * float(_item_d_ger.get("preco_unit",0) or 0),
+                                    }
+                                    if _of_edit_g in _ofs_lista_ger:
+                                        _of_novo_g = _conn_upd_g.execute(_text_upd_g("""
+                                            SELECT nome_cliente, numero_pedido, liga,
+                                                   descricao_peca, numero_modelo,
+                                                   peso_liquido_kg, valor_unitario
+                                            FROM ordem_fabricacao WHERE numero_of=:of
+                                        """), {"of": _of_edit_g}).fetchone()
+                                        if _of_novo_g:
+                                            _novo_pu_g = float(_of_novo_g[6] or 0)
+                                            _conn_upd_g.execute(_text_upd_g("""
+                                                UPDATE oe_item SET
+                                                    num_of=:num_of, qtd=:qtd, serie=:serie,
+                                                    corrida=:corrida, certificado=:cert,
+                                                    preco_total=:pt, nome_cliente=:cli,
+                                                    num_pedido=:ped, liga=:liga,
+                                                    descricao=:descricao, cod_peca=:cod_peca,
+                                                    peso_unit=:peso, preco_unit=:pu
+                                                WHERE id=:id
+                                            """), {**_upd_g,
+                                                   "cli":      _of_novo_g[0] or "",
+                                                   "ped":      _of_novo_g[1] or "",
+                                                   "liga":     _of_novo_g[2] or "",
+                                                   "descricao": _of_novo_g[3] or "",
+                                                   "cod_peca": _of_novo_g[4] or "",
+                                                   "peso":     float(_of_novo_g[5] or 0),
+                                                   "pu":       _novo_pu_g,
+                                                   "pt":       _edit_qtd_ger * _novo_pu_g})
+                                    else:
                                         _conn_upd_g.execute(_text_upd_g("""
                                             UPDATE oe_item SET
-                                                num_of=:num_of,
-                                                num_pedido=:num_pedido,
-                                                referencia=:referencia,
-                                                certificado=:cert,
-                                                cod_peca=:cod_peca,
-                                                corrida=:corrida,
-                                                qtd=:qtd,
-                                                serie=:serie,
+                                                num_of=:num_of, qtd=:qtd, serie=:serie,
+                                                corrida=:corrida, certificado=:cert,
                                                 preco_total=:pt
                                             WHERE id=:id
-                                        """), {
-                                            "id": _it_e["id"],
-                                            "num_of": _it_e["num_of"],
-                                            "num_pedido": _it_e["num_pedido"],
-                                            "referencia": _it_e["referencia"],
-                                            "cert": _it_e["certificado"],
-                                            "cod_peca": _it_e["cod_peca"],
-                                            "corrida": _it_e["corrida"],
-                                            "qtd": _it_e["qtd"],
-                                            "serie": _it_e["serie"],
-                                            "pt": _pt,
-                                        })
-                                # Atualiza OFs com peso, preço unitário e qtd_expedida
-                                try:
-                                    from sqlite_models import OrdemFabricacao
-                                    from sqlalchemy.orm import Session
-                                    from sqlalchemy import select as _sel_upd
-                                    _qtd_por_of = {}
-                                    _pu_por_of = {}
-                                    _peso_por_of = {}
-                                    for _it_e in _itens_edit:
-                                        _nof = _it_e["num_of"].strip()
-                                        _qtd = int(_it_e["qtd"] or 0)
-                                        _pu = float(_it_e["preco_unit"] or 0)
-                                        _peso = float(_it_e.get("peso_unit", 0) or 0)
-                                        if _nof and _qtd > 0:
-                                            _qtd_por_of[_nof] = _qtd_por_of.get(_nof, 0) + _qtd
-                                        if _nof and _pu > 0:
-                                            _pu_por_of[_nof] = _pu
-                                        if _nof and _peso > 0:
-                                            _peso_por_of[_nof] = _peso
-
-                                    with Session(_eng_upd_g) as _sess_upd:
-                                        for _nof, _qtd in _qtd_por_of.items():
-                                            _of_upd = _sess_upd.scalar(
-                                                _sel_upd(OrdemFabricacao).where(OrdemFabricacao.numero_of == _nof)
-                                            )
-                                            if _of_upd:
-                                                # Recalcula qtd_expedida somando todos os itens desta OE
-                                                _qtd_total_of = _conn_upd_g.execute(_text_upd_g("""
-                                                    SELECT COALESCE(SUM(qtd),0) FROM oe_item
-                                                    WHERE num_of=:nof
-                                                """), {"nof": _nof}).scalar()
-                                                _of_upd.qtd_expedida = int(_qtd_total_of or 0)
-                                                if _nof in _pu_por_of:
-                                                    _of_upd.valor_unitario = _pu_por_of[_nof]
-                                                if _nof in _peso_por_of:
-                                                    _of_upd.peso_liquido_kg = _peso_por_of[_nof]
-                                        _sess_upd.commit()
-                                except Exception as _e_upd_of:
-                                    st.warning(f"Itens atualizados mas erro ao atualizar OFs: {_e_upd_of}")
-
-                                st.success(f"✅ Todos os {len(_itens_edit)} itens atualizados!")
+                                        """), _upd_g)
+                                st.success(f"✅ Item atualizado com sucesso!")
                                 st.rerun()
                             except Exception as _e_g:
                                 st.error(f"Erro: {_e_g}")
@@ -4404,64 +4316,6 @@ def pagina_nova_oe():
 # ══════════════════════════════════════════════════════════════════════════════
 # MÓDULO: CONSULTA DE ORDENS DE ENTREGA
 # ══════════════════════════════════════════════════════════════════════════════
-
-@st.cache_data(ttl=30, show_spinner=False)
-def _buscar_ultima_serie_of(numero_of: str) -> int:
-    """Retorna o último número de série expedido para uma OF."""
-    try:
-        from fundicao_db import engine as _eng
-        from sqlalchemy import text as _t
-        with _eng.connect() as _conn:
-            row = _conn.execute(_t("""
-                SELECT serie FROM oe_item
-                WHERE num_of = :nof AND serie IS NOT NULL AND serie != ''
-                ORDER BY criado_em DESC, id DESC
-                LIMIT 1
-            """), {"nof": numero_of}).fetchone()
-            if row and row[0]:
-                # Extrai o último número da série (ex: "1 A 7" -> 7, "6 A 10" -> 10)
-                import re
-                nums = re.findall(r'\d+', str(row[0]))
-                if nums:
-                    return int(nums[-1])
-    except Exception:
-        pass
-    return 0
-
-
-@st.cache_data(ttl=60, show_spinner=False)
-def _carregar_oes_cache(f_oe="", f_cliente="", f_of=""):
-    """Carrega OEs com filtros básicos. Cache de 60s."""
-    try:
-        from fundicao_db import engine as _eng
-        from sqlalchemy import text as _t
-        query = """
-            SELECT i.numero_oe, i.num_of, i.nome_cliente, i.num_pedido,
-                   i.referencia, i.liga, i.corrida, i.certificado,
-                   i.cod_peca, i.descricao, i.peso_unit, i.qtd,
-                   i.serie, i.preco_unit, i.preco_total, i.criado_em,
-                   oe.observacao, oe.data_entrega
-            FROM oe_item i
-            LEFT JOIN ordem_entrega oe ON oe.numero_oe = i.numero_oe
-            WHERE 1=1
-        """
-        params = {}
-        if f_oe.strip():
-            query += " AND i.numero_oe ILIKE :oe"
-            params["oe"] = f"%{f_oe.strip()}%"
-        if f_cliente.strip():
-            query += " AND i.nome_cliente ILIKE :cli"
-            params["cli"] = f"%{f_cliente.strip()}%"
-        if f_of.strip():
-            query += " AND i.num_of ILIKE :of"
-            params["of"] = f"%{f_of.strip()}%"
-        query += " ORDER BY i.numero_oe DESC, i.criado_em, i.id LIMIT 5000"
-        with _eng.connect() as _conn:
-            rows = _conn.execute(_t(query), params).fetchall()
-            return [dict(r._mapping) for r in rows]
-    except Exception as e:
-        return []
-
 
 def pagina_consulta_oes():
     """Consulta, filtros e relatório de Ordens de Entrega."""
@@ -4640,7 +4494,7 @@ def pagina_consulta_oes():
 
     # ── Botao gerar OE com template (aparece quando filtra por numero de OE) ─
     _oes_unicas = df["numero_oe"].unique().tolist()
-    if len(_oes_unicas) <= 10:
+    if len(_oes_unicas) == 1 or (f_oe.strip() and len(_oes_unicas) <= 3):
         _tmpl_b64 = get_config("template_oe_base64", "")
         if _tmpl_b64:
             st.divider()
@@ -4672,7 +4526,7 @@ def pagina_consulta_oes():
                                        observacoes
                                 FROM oe_item
                                 WHERE numero_oe = :oe
-                                ORDER BY criado_em, id
+                                ORDER BY id
                             """), {"oe": str(_noe)}).fetchall()
 
                         if not _itens_oe:
