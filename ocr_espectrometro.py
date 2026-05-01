@@ -1,6 +1,5 @@
 """
-ocr_espectrometro.py
-Módulo de OCR para leitura de tela do espectrômetro via Google Cloud Vision API.
+ocr_espectrometro.py - OCR via Google Vision API com detecção por coordenadas
 """
 
 import streamlit as st
@@ -14,8 +13,8 @@ import io
 ELEMENTOS = [
     "C", "Si", "Mn", "P", "S", "Cr", "Ni", "Mo", "Cu",
     "W", "Nb", "B", "CE", "V", "Co", "Fe", "N", "Mg",
+    "Al", "Ti", "Pb", "Sn", "As", "Bi", "Ca", "Zr", "La",
 ]
-
 
 def _imagen_para_base64(uploaded_file):
     bytes_data = uploaded_file.read()
@@ -23,81 +22,118 @@ def _imagen_para_base64(uploaded_file):
     if img.mode in ("RGBA", "P"):
         img = img.convert("RGB")
     buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=90)
+    img.save(buf, format="JPEG", quality=95)
     b64 = base64.standard_b64encode(buf.getvalue()).decode("utf-8")
     return b64
 
 
-def _extrair_valores_do_texto(texto):
-    """
-    Analisa o texto extraído pelo Google Vision e mapeia os valores de composição química.
-    Estratégia: para cada elemento, pega o valor numérico que aparece na linha do meio (x̄).
-    """
-    linhas = texto.split("\n")
-    resultado = {}
-
-    # Encontra os elementos na tabela e seus valores
-    for i, linha in enumerate(linhas):
-        linha = linha.strip()
-        for elem in ELEMENTOS:
-            # Verifica se a linha contém apenas o símbolo do elemento (cabeçalho da coluna)
-            if re.match(rf'^{re.escape(elem)}\s*$', linha, re.IGNORECASE) or \
-               re.match(rf'^{re.escape(elem)}\s*%\s*$', linha, re.IGNORECASE):
-                # Procura o valor numérico nas próximas linhas
-                for j in range(i+1, min(i+6, len(linhas))):
-                    proxima = linhas[j].strip()
-                    # Remove < e outros prefixos
-                    proxima_limpa = re.sub(r'^[<>≤≥]', '', proxima).strip()
-                    try:
-                        valor = float(proxima_limpa.replace(",", "."))
-                        if 0 <= valor <= 100:
-                            if elem not in resultado:
-                                resultado[elem] = str(valor)
-                            break
-                    except ValueError:
-                        if proxima and not re.match(r'^[A-Za-z%]', proxima):
-                            continue
-                        break
-
-    # Segunda estratégia: busca por padrões "ELEM valor" na mesma linha
-    texto_completo = texto
-    for elem in ELEMENTOS:
-        if elem not in resultado:
-            # Padrão: elemento seguido de número na mesma linha
-            padrao = rf'\b{re.escape(elem)}\s*%?\s*([<>]?\s*\d+[.,]\d+)'
-            match = re.search(padrao, texto_completo, re.IGNORECASE)
-            if match:
-                valor_str = re.sub(r'^[<>]', '', match.group(1)).strip()
-                try:
-                    valor = float(valor_str.replace(",", "."))
-                    if 0 <= valor <= 100:
-                        resultado[elem] = str(valor)
-                except ValueError:
-                    pass
-
-    return resultado
-
-
-def _chamar_google_vision(b64_image, api_key):
-    """Chama a Google Cloud Vision API para extrair texto da imagem."""
+def _chamar_google_vision_completo(b64_image, api_key):
+    """Chama Google Vision e retorna anotações completas com coordenadas."""
     url = f"https://vision.googleapis.com/v1/images:annotate?key={api_key}"
     payload = {
         "requests": [{
             "image": {"content": b64_image},
-            "features": [{"type": "TEXT_DETECTION"}]
+            "features": [{"type": "DOCUMENT_TEXT_DETECTION"}]
         }]
     }
     response = requests.post(url, json=payload, timeout=30)
     response.raise_for_status()
-    data = response.json()
+    return response.json()
 
-    # Extrai o texto completo
+
+def _extrair_palavras_com_posicao(data):
+    """Extrai todas as palavras com suas coordenadas centrais."""
+    palavras = []
     try:
-        texto = data["responses"][0]["fullTextAnnotation"]["text"]
+        pages = data["responses"][0]["fullTextAnnotation"]["pages"]
+        for page in pages:
+            for block in page["blocks"]:
+                for par in block["paragraphs"]:
+                    for word in par["words"]:
+                        texto = "".join(s["text"] for s in word["symbols"])
+                        verts = word["boundingBox"]["vertices"]
+                        xs = [v.get("x", 0) for v in verts]
+                        ys = [v.get("y", 0) for v in verts]
+                        cx = sum(xs) / len(xs)
+                        cy = sum(ys) / len(ys)
+                        palavras.append({"texto": texto, "cx": cx, "cy": cy})
     except (KeyError, IndexError):
-        texto = ""
+        pass
+    return palavras
 
-    return texto
+
+def _extrair_valores_por_coordenadas(palavras):
+    """
+    Estratégia principal: encontra os cabeçalhos dos elementos pela posição X
+    e associa o valor da linha X (média) que está abaixo deles.
+    """
+    resultado = {}
+
+    # 1. Encontra todas as palavras que são símbolos de elementos
+    elem_set = set(ELEMENTOS)
+    headers = []
+    for p in palavras:
+        t = p["texto"].strip().rstrip("%").strip()
+        if t in elem_set:
+            headers.append({"elem": t, "cx": p["cx"], "cy": p["cy"]})
+
+    if not headers:
+        return resultado
+
+    # 2. Para cada header, encontra o valor numérico mais próximo abaixo
+    # A linha "x" (média) fica entre a linha superior e inferior
+    # Agrupa palavras por faixa de Y para identificar as linhas
+    palavras_sorted_y = sorted(palavras, key=lambda p: p["cy"])
+
+    # Identifica a linha com símbolo X (linha do meio = valor medido)
+    # Busca palavras "X" ou "x" isoladas
+    linha_x_y = None
+    for p in palavras:
+        if p["texto"].strip() in ("X", "x", "×", "x̄"):
+            linha_x_y = p["cy"]
+            break
+
+    # Para cada elemento, busca o valor numérico na mesma coluna (cx próximo)
+    # na faixa de Y abaixo do cabeçalho
+    for h in headers:
+        elem = h["elem"]
+        if elem in resultado:
+            continue
+
+        # Define tolerância horizontal (coluna)
+        tol_x = 60
+
+        # Candidatos: palavras na mesma coluna X, abaixo do cabeçalho
+        candidatos = [
+            p for p in palavras
+            if abs(p["cx"] - h["cx"]) < tol_x
+            and p["cy"] > h["cy"] + 10
+            and p["cy"] < h["cy"] + 300  # limita busca vertical
+        ]
+
+        # Se encontrou linha X, prioriza candidatos próximos a ela
+        if linha_x_y:
+            candidatos_x = [
+                p for p in candidatos
+                if abs(p["cy"] - linha_x_y) < 25
+            ]
+            if candidatos_x:
+                candidatos = candidatos_x
+
+        # Tenta parsear cada candidato como número
+        for c in sorted(candidatos, key=lambda p: p["cy"]):
+            txt = c["texto"].strip()
+            txt_limpo = re.sub(r'^[<>≤≥]', '', txt).strip()
+            txt_limpo = txt_limpo.replace(",", ".")
+            try:
+                valor = float(txt_limpo)
+                if 0 <= valor <= 100:
+                    resultado[elem] = str(valor)
+                    break
+            except ValueError:
+                continue
+
+    return resultado
 
 
 def render_ocr_espectrometro():
@@ -124,12 +160,23 @@ def render_ocr_espectrometro():
 
                         foto.seek(0)
                         b64 = _imagen_para_base64(foto)
-                        texto_extraido = _chamar_google_vision(b64, api_key)
+                        data = _chamar_google_vision_completo(b64, api_key)
 
-                        # DEBUG: salva texto extraído
-                        st.session_state["ocr_debug_texto"] = texto_extraido
+                        # Salva texto bruto para debug
+                        try:
+                            texto_bruto = data["responses"][0]["fullTextAnnotation"]["text"]
+                            st.session_state["ocr_debug_texto"] = texto_bruto
+                        except:
+                            st.session_state["ocr_debug_texto"] = "Sem texto extraído"
 
-                        resultado = _extrair_valores_do_texto(texto_extraido)
+                        palavras = _extrair_palavras_com_posicao(data)
+                        resultado = _extrair_valores_por_coordenadas(palavras)
+
+                        # Salva palavras para debug
+                        st.session_state["ocr_debug_palavras"] = [
+                            f"{p['texto']} (x={p['cx']:.0f}, y={p['cy']:.0f})"
+                            for p in palavras if p["texto"].strip()
+                        ]
 
                         aplicados = []
                         ignorados = []
@@ -159,17 +206,19 @@ def render_ocr_espectrometro():
             if res.get("status") == "ok":
                 aplicados = res.get("aplicados", [])
                 ignorados = res.get("ignorados", [])
-                st.success(f"✅ {len(aplicados)} elemento(s) preenchido(s)! Revise os valores abaixo.")
                 if aplicados:
+                    st.success(f"✅ {len(aplicados)} elemento(s) preenchido(s)! Revise os valores abaixo.")
                     st.write(", ".join(aplicados))
+                else:
+                    st.warning("⚠️ Nenhum elemento encontrado. Verifique a foto e tente novamente.")
                 if ignorados:
                     st.warning("Não encontrados: " + ", ".join(ignorados))
             elif res.get("status") == "erro":
                 st.error(f"❌ {res.get('msg')}")
 
-            # DEBUG: mostra texto bruto extraído
-            if "ocr_debug_texto" in st.session_state:
-                with st.expander("🔧 DEBUG - Texto extraído"):
-                    st.text(st.session_state["ocr_debug_texto"])
+            # DEBUG
+            if "ocr_debug_palavras" in st.session_state:
+                with st.expander("🔧 DEBUG - Palavras e posições"):
+                    st.text("\n".join(st.session_state["ocr_debug_palavras"][:80]))
 
     st.markdown("---")
