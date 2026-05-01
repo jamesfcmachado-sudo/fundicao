@@ -3890,7 +3890,15 @@ def pagina_nova_oe():
                 with r2c4:
                     qtd = st.number_input("Qtde (pçs)", key=f"qtd_{i}", min_value=0, value=0)
                 with r2c5:
-                    serie = st.text_input("Série", key=f"serie_{i}")
+                    # Calcula série automática baseada na última série expedida
+                    _of_serie = of_item.strip() if of_item.strip() else (of_obj.numero_of or "")
+                    _ultima_serie = _buscar_ultima_serie_of(_of_serie) if _of_serie else 0
+                    _serie_inicio = _ultima_serie + 1
+                    _serie_fim = _ultima_serie + int(qtd) if qtd > 0 else _serie_inicio
+                    _serie_auto = f"{_serie_inicio} A {_serie_fim}" if qtd > 1 else str(_serie_inicio) if qtd == 1 else ""
+                    serie = st.text_input("Série", key=f"serie_{i}",
+                                          value=st.session_state.get(f"serie_{i}", _serie_auto),
+                                          help=f"Última série expedida: {_ultima_serie}. Sugestão automática.")
                 with r2c6:
                     preco_unit = st.number_input("Preço Unit. (R$)", key=f"preco_{i}",
                                                  value=float(of_obj.valor_unitario or 0), min_value=0.0, format="%.4f")
@@ -4356,6 +4364,30 @@ def pagina_nova_oe():
 # ══════════════════════════════════════════════════════════════════════════════
 # MÓDULO: CONSULTA DE ORDENS DE ENTREGA
 # ══════════════════════════════════════════════════════════════════════════════
+
+@st.cache_data(ttl=30, show_spinner=False)
+def _buscar_ultima_serie_of(numero_of: str) -> int:
+    """Retorna o último número de série expedido para uma OF."""
+    try:
+        from fundicao_db import engine as _eng
+        from sqlalchemy import text as _t
+        with _eng.connect() as _conn:
+            row = _conn.execute(_t("""
+                SELECT serie FROM oe_item
+                WHERE num_of = :nof AND serie IS NOT NULL AND serie != ''
+                ORDER BY criado_em DESC, id DESC
+                LIMIT 1
+            """), {"nof": numero_of}).fetchone()
+            if row and row[0]:
+                # Extrai o último número da série (ex: "1 A 7" -> 7, "6 A 10" -> 10)
+                import re
+                nums = re.findall(r'\d+', str(row[0]))
+                if nums:
+                    return int(nums[-1])
+    except Exception:
+        pass
+    return 0
+
 
 @st.cache_data(ttl=60, show_spinner=False)
 def _carregar_oes_cache(f_oe="", f_cliente="", f_of=""):
