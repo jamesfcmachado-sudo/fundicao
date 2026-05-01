@@ -1589,7 +1589,7 @@ def pagina_relatorios() -> None:
                                             "data_abertura_pedido": _of_ed.data_abertura_pedido,
                                             "condicao_modelo":    _of_ed.condicao_modelo or "",
                                             "observacoes":        _of_ed.observacoes or "",
-                                            "status_of":          _of_ed.status_of or "Ativa",
+                                            "status_of":          _ler_status_of_banco(_of_ed.numero_of) or "Ativa",
                                         }
                             except Exception as _ex:
                                 st.error(f"Erro ao carregar OF: {_ex}")
