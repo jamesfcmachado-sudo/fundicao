@@ -95,7 +95,7 @@ def _extrair_valores_por_coordenadas(palavras):
 
     # Para cada elemento, busca os valores numéricos na mesma coluna
     # e pega o valor do MEIO (linha x̄ = valor medido)
-    tol_x = 60
+    tol_x = 65
 
     for h in headers:
         elem = h["elem"]
@@ -105,7 +105,7 @@ def _extrair_valores_por_coordenadas(palavras):
         # Candidatos: palavras na mesma coluna X, abaixo do cabeçalho
         candidatos = [
             p for p in palavras
-            if abs(p["cx"] - h["cx"]) < tol_x
+            if abs(p["cx"] - h["cx"]) <= tol_x
             and p["cy"] > h["cy"] + 5
             and p["cy"] < h["cy"] + 350
         ]
