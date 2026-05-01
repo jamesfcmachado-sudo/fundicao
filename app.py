@@ -4173,98 +4173,86 @@ def pagina_nova_oe():
 
                     # ── Alterar ──────────────────────────────────────────────
                     with st.expander(f"✏️ Alterar OE {_oe_num_ger}", expanded=False):
-                        st.caption("Selecione o item a alterar, modifique os campos e clique em Salvar.")
+                        st.caption("Edite os campos diretamente na tabela abaixo e clique em Salvar Todos.")
 
                         _edit_obs_ger = st.text_area("Observações gerais",
                             value=_obs_ger or "", key="edit_obs_ger")
 
                         st.divider()
-                        st.markdown("**Selecione o item a alterar:**")
+                        st.markdown("**Edite os itens abaixo (todos de uma vez):**")
 
-                        _opcoes_ger = {
-                            f"Item {i+1}: OF {dict(it._mapping).get('num_of','')} | {dict(it._mapping).get('referencia','')}": i
-                            for i, it in enumerate(_itens_ger)
-                        }
-                        _item_sel_ger = st.selectbox("Item", options=list(_opcoes_ger.keys()),
-                                                      key="sel_item_ger")
-                        _item_idx_ger = _opcoes_ger[_item_sel_ger]
-                        _item_d_ger = dict(_itens_ger[_item_idx_ger]._mapping)
-                        _of_atual_ger = str(_item_d_ger.get("num_of",""))
+                        # Monta lista de dicts para edição em massa
+                        _itens_edit = []
+                        for _ii, _it_r in enumerate(_itens_ger):
+                            _it_d = dict(_it_r._mapping)
+                            with st.container(border=True):
+                                st.caption(f"Item {_ii+1} — {_it_d.get('descricao','')}")
+                                _ea, _eb, _ec, _ed = st.columns([1.5, 2, 2, 1.5])
+                                with _ea:
+                                    _e_of = st.text_input("OF", value=str(_it_d.get("num_of","") or ""), key=f"e_of_{_ii}")
+                                with _eb:
+                                    _e_ped = st.text_input("Nº Pedido", value=str(_it_d.get("num_pedido","") or ""), key=f"e_ped_{_ii}")
+                                with _ec:
+                                    _e_ref = st.text_input("Referência", value=str(_it_d.get("referencia","") or ""), key=f"e_ref_{_ii}")
+                                with _ed:
+                                    _e_cert = st.text_input("Certificado", value=str(_it_d.get("certificado","") or ""), key=f"e_cert_{_ii}")
+                                _ef, _eg, _eh, _ei = st.columns([2, 1.5, 1, 1.5])
+                                with _ef:
+                                    _e_cod = st.text_input("Código Peça", value=str(_it_d.get("cod_peca","") or ""), key=f"e_cod_{_ii}")
+                                with _eg:
+                                    _e_corr = st.text_input("Corrida", value=str(_it_d.get("corrida","") or ""), key=f"e_corr_{_ii}")
+                                with _eh:
+                                    _e_qtd = st.number_input("Qtd", value=int(_it_d.get("qtd",0) or 0), min_value=0, key=f"e_qtd_{_ii}")
+                                with _ei:
+                                    _e_serie = st.text_input("Série", value=str(_it_d.get("serie","") or ""), key=f"e_serie_{_ii}")
+                                _itens_edit.append({
+                                    "id": _it_d["id"],
+                                    "num_of": _e_of,
+                                    "num_pedido": _e_ped,
+                                    "referencia": _e_ref,
+                                    "certificado": _e_cert,
+                                    "cod_peca": _e_cod,
+                                    "corrida": _e_corr,
+                                    "qtd": _e_qtd,
+                                    "serie": _e_serie,
+                                    "preco_unit": float(_it_d.get("preco_unit",0) or 0),
+                                })
 
-                        st.markdown(f"**Editando:** {_item_d_ger.get('referencia','')} — {_item_d_ger.get('descricao','')}")
-
-                        _gc1, _gc2 = st.columns(2)
-                        with _gc1:
-                            _edit_of_ger = st.text_input("OF", value=_of_atual_ger, key="edit_of_ger")
-                            if _edit_of_ger.strip() and _edit_of_ger.strip() not in _ofs_lista_ger:
-                                st.warning(f"OF '{_edit_of_ger}' não encontrada.")
-                            _edit_qtd_ger = st.number_input("Quantidade",
-                                value=int(_item_d_ger.get("qtd",0) or 0),
-                                min_value=0, key="edit_qtd_ger")
-                        with _gc2:
-                            _edit_serie_ger  = st.text_input("Série",
-                                value=str(_item_d_ger.get("serie","") or ""), key="edit_serie_ger")
-                            _edit_corr_ger   = st.text_input("Corrida",
-                                value=str(_item_d_ger.get("corrida","") or ""), key="edit_corr_ger")
-                            _edit_cert_ger   = st.text_input("Certificado",
-                                value=str(_item_d_ger.get("certificado","") or ""), key="edit_cert_ger")
-
-                        if st.button("💾 Salvar alterações deste item", key="btn_salvar_ger",
-                                     type="primary"):
+                        if st.button("💾 Salvar TODOS os itens", key="btn_salvar_todos_ger", type="primary"):
                             try:
                                 from fundicao_db import engine as _eng_upd_g
                                 from sqlalchemy import text as _text_upd_g
-                                _of_edit_g = _edit_of_ger.strip()
                                 with _eng_upd_g.begin() as _conn_upd_g:
                                     _conn_upd_g.execute(_text_upd_g(
                                         "UPDATE ordem_entrega SET observacao=:obs WHERE numero_oe=:noe"
                                     ), {"obs": _edit_obs_ger, "noe": _oe_num_ger.strip()})
-
-                                    _upd_g = {
-                                        "id":      _item_d_ger["id"],
-                                        "num_of":  _of_edit_g,
-                                        "qtd":     _edit_qtd_ger,
-                                        "serie":   _edit_serie_ger,
-                                        "corrida": _edit_corr_ger,
-                                        "cert":    _edit_cert_ger,
-                                        "pt":      _edit_qtd_ger * float(_item_d_ger.get("preco_unit",0) or 0),
-                                    }
-                                    if _of_edit_g in _ofs_lista_ger:
-                                        _of_novo_g = _conn_upd_g.execute(_text_upd_g("""
-                                            SELECT nome_cliente, numero_pedido, liga,
-                                                   descricao_peca, numero_modelo,
-                                                   peso_liquido_kg, valor_unitario
-                                            FROM ordem_fabricacao WHERE numero_of=:of
-                                        """), {"of": _of_edit_g}).fetchone()
-                                        if _of_novo_g:
-                                            _novo_pu_g = float(_of_novo_g[6] or 0)
-                                            _conn_upd_g.execute(_text_upd_g("""
-                                                UPDATE oe_item SET
-                                                    num_of=:num_of, qtd=:qtd, serie=:serie,
-                                                    corrida=:corrida, certificado=:cert,
-                                                    preco_total=:pt, nome_cliente=:cli,
-                                                    num_pedido=:ped, liga=:liga,
-                                                    descricao=:descricao, cod_peca=:cod_peca,
-                                                    peso_unit=:peso, preco_unit=:pu
-                                                WHERE id=:id
-                                            """), {**_upd_g,
-                                                   "cli":      _of_novo_g[0] or "",
-                                                   "ped":      _of_novo_g[1] or "",
-                                                   "liga":     _of_novo_g[2] or "",
-                                                   "descricao": _of_novo_g[3] or "",
-                                                   "cod_peca": _of_novo_g[4] or "",
-                                                   "peso":     float(_of_novo_g[5] or 0),
-                                                   "pu":       _novo_pu_g,
-                                                   "pt":       _edit_qtd_ger * _novo_pu_g})
-                                    else:
+                                    for _it_e in _itens_edit:
+                                        _pt = _it_e["qtd"] * _it_e["preco_unit"]
                                         _conn_upd_g.execute(_text_upd_g("""
                                             UPDATE oe_item SET
-                                                num_of=:num_of, qtd=:qtd, serie=:serie,
-                                                corrida=:corrida, certificado=:cert,
+                                                num_of=:num_of,
+                                                num_pedido=:num_pedido,
+                                                referencia=:referencia,
+                                                certificado=:cert,
+                                                cod_peca=:cod_peca,
+                                                corrida=:corrida,
+                                                qtd=:qtd,
+                                                serie=:serie,
                                                 preco_total=:pt
                                             WHERE id=:id
-                                        """), _upd_g)
-                                st.success(f"✅ Item atualizado com sucesso!")
+                                        """), {
+                                            "id": _it_e["id"],
+                                            "num_of": _it_e["num_of"],
+                                            "num_pedido": _it_e["num_pedido"],
+                                            "referencia": _it_e["referencia"],
+                                            "cert": _it_e["certificado"],
+                                            "cod_peca": _it_e["cod_peca"],
+                                            "corrida": _it_e["corrida"],
+                                            "qtd": _it_e["qtd"],
+                                            "serie": _it_e["serie"],
+                                            "pt": _pt,
+                                        })
+                                st.success(f"✅ Todos os {len(_itens_edit)} itens atualizados!")
                                 st.rerun()
                             except Exception as _e_g:
                                 st.error(f"Erro: {_e_g}")
