@@ -209,7 +209,7 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
     # ═══════════════════════════════════════════════
     # Proporcoes baseadas nas larguras reais do template Excel
     # Total das proporcoes soma exatamente W
-    _base = [23.6, 16.4, 23.6, 14.7, 12.1, 17.6, 40.0, 33.5, 16.2, 11.7, 18.3, 26.1, 23.3]
+    _base = [23.6, 16.4, 28.0, 14.7, 12.1, 17.6, 38.0, 33.5, 16.2, 11.7, 18.3, 22.1, 21.3]
     _total_base = sum(_base)
     CW = [b / _total_base * W for b in _base]
 
@@ -239,7 +239,7 @@ def gerar_oe_pdf(numero_oe, nome_cliente, itens, observacoes="",
             pc(it.get("liga","") or "", TA_CENTER),
             pc(it.get("corrida","") or "", TA_CENTER),
             pc(it.get("certificado","") or "", TA_CENTER),
-            pc(it.get("cod_peca","") or ""),
+            pc(it.get("cod_peca","") or "", TA_CENTER),
             pc(it.get("descricao","") or "", TA_CENTER),
             pc(fpeso(peso), TA_CENTER),   # Peso centralizado
             pc(str(qtd), TA_CENTER),
