@@ -131,14 +131,17 @@ def _extrair_valores_por_coordenadas(palavras):
         if len(numericos) == 1:
             resultado[elem] = str(numericos[0]["valor"])
         elif linha_x_y:
-            # Usa o Y do símbolo X como referência — pega o mais próximo
-            mais_proximo = min(numericos, key=lambda n: abs(n["cy"] - linha_x_y))
-            resultado[elem] = str(mais_proximo["valor"])
+            # Filtra candidatos na faixa da linha X (±30px)
+            na_linha_x = [n for n in numericos if abs(n["cy"] - linha_x_y) <= 30]
+            if na_linha_x:
+                resultado[elem] = str(na_linha_x[0]["valor"])
+            else:
+                # Fallback: pega o mais próximo do X
+                mais_proximo = min(numericos, key=lambda n: abs(n["cy"] - linha_x_y))
+                resultado[elem] = str(mais_proximo["valor"])
         elif len(numericos) == 2:
-            # Dois valores — pega o segundo (mais abaixo = medido)
             resultado[elem] = str(numericos[1]["valor"])
         elif len(numericos) >= 3:
-            # Três valores — pega o segundo (min, MEDIDO, max)
             resultado[elem] = str(numericos[1]["valor"])
 
     return resultado
